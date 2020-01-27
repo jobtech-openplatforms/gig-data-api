@@ -1,4 +1,9 @@
-﻿using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
+﻿using System;
+using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
+using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer.IoC;
+using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform.IoC;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Engine.IoC
 {

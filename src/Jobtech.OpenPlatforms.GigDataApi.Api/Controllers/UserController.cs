@@ -1,4 +1,19 @@
-﻿namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Web;
+using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
+using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
+using Jobtech.OpenPlatforms.GigDataApi.Engine.IoC;
+using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Raven.Client.Documents;
+
+namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]

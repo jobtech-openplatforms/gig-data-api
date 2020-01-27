@@ -1,4 +1,6 @@
-﻿namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions
+﻿using System;
+
+namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions
 {
     public class AppNotRegisteredForNotificationsException : Exception
     {

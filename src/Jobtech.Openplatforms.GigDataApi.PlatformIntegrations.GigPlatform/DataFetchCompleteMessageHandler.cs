@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core.Models;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform.Exceptions;
+using Jobtech.OpenPlatforms.GigDataCommon.Library.Messages;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -65,12 +66,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
                 var periodStart = message.PlatformData.Interactions.Min(i => i.Period?.Start);
                 var periodEnd = message.PlatformData.Interactions.Max(i => i.Period?.End);
 
-                var ratings = new List<KeyValuePair<string, Gig.Common.Models.Rating>>();
+                var ratings = new List<KeyValuePair<string, GigDataCommon.Library.Models.Rating>>();
                 foreach (var interaction in message.PlatformData.Interactions)
                 {
                     foreach (var rating in interaction.Outcome.Ratings)
                     {
-                        ratings.Add(new KeyValuePair<string, Gig.Common.Models.Rating>(interaction.Id, rating));
+                        ratings.Add(new KeyValuePair<string, GigDataCommon.Library.Models.Rating>(interaction.Id, rating));
                     }
                 }
 
@@ -151,10 +152,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
                     Common.PlatformAchievementType achievementType = PlatformAchievementType.Badge;
                     switch (achievement.Type)
                     {
-                        case Gig.Common.Models.PlatformAchievementType.Badge:
+                        case GigDataCommon.Library.Models.PlatformAchievementType.Badge:
                             achievementType = PlatformAchievementType.Badge;
                             break;
-                        case Gig.Common.Models.PlatformAchievementType.QualificationAssessment:
+                        case GigDataCommon.Library.Models.PlatformAchievementType.QualificationAssessment:
                             achievementType = PlatformAchievementType.QualificationAssessment;
                             break;
                         default:

@@ -1,4 +1,10 @@
-﻿using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
+using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {

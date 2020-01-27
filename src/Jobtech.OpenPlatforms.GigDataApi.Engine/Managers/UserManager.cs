@@ -1,5 +1,17 @@
-﻿using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
+﻿using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
+using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.IoC;
+using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {

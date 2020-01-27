@@ -1,4 +1,13 @@
-﻿namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
+using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core.Models;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
+
+namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {
     public interface IPlatformDataManager
     {

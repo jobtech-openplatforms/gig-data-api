@@ -1,4 +1,12 @@
-﻿using PlatformData = Jobtech.OpenPlatforms.GigDataApi.Core.Entities.PlatformData;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
+using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
+using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
+using Raven.Client.Documents.Session;
+using Rebus.Bus;
+using PlatformData = Jobtech.OpenPlatforms.GigDataApi.Core.Entities.PlatformData;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {

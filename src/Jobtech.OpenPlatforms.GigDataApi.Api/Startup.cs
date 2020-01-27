@@ -1,4 +1,30 @@
-﻿namespace Jobtech.OpenPlatforms.GigDataApi.Api
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Reflection;
+using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
+using Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB;
+using Jobtech.OpenPlatforms.GigDataApi.Engine.IoC;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.ApplicationInsights;
+using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
+using Raven.Client.Documents;
+using Rebus.Config;
+using Rebus.Routing.TypeBased;
+using Rebus.ServiceProvider;
+using Swashbuckle.AspNetCore.Swagger;
+
+namespace Jobtech.OpenPlatforms.GigDataApi.Api
 {
     public class Startup
     {

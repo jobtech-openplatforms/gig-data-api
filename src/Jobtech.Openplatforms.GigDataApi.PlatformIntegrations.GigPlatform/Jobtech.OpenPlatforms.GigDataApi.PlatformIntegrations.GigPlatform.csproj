@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\dependencies\gig-data-common\src\Jobtech.OpenPlatforms.GigDataCommon.Library\Jobtech.OpenPlatforms.GigDataCommon.Library.csproj" />
     <ProjectReference Include="..\Jobtech.OpenPlatforms.GigDataApi.Common\Jobtech.OpenPlatforms.GigDataApi.Common.csproj" />
     <ProjectReference Include="..\Jobtech.OpenPlatforms.GigDataApi.Core\Jobtech.OpenPlatforms.GigDataApi.Core.csproj" />
     <ProjectReference Include="..\Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core\Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core.csproj" />

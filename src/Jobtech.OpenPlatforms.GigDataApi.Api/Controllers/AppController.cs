@@ -1,4 +1,12 @@
-﻿namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Raven.Client.Documents;
+
+namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 {
     [ApiExplorerSettings(IgnoreApi = true)]
     [Route("api/[controller]")]
