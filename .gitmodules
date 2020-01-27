@@ -1,0 +1,3 @@
+[submodule "dependencies/gig-data-common"]
+	path = dependencies/gig-data-common
+	url = https://github.com/jobtech-openplatforms/gig-data-common.git
