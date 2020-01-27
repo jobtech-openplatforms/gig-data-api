@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Auth0.ManagementApi" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="2.2.0" />
+    <PackageReference Include="RavenDB.Client" Version="4.1.4" />
+    <PackageReference Include="Rebus" Version="5.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Jobtech.OpenPlatforms.GigDataApi.Common\Jobtech.OpenPlatforms.GigDataApi.Common.csproj" />
+    <ProjectReference Include="..\Jobtech.OpenPlatforms.GigDataApi.Core\Jobtech.OpenPlatforms.GigDataApi.Core.csproj" />
+    <ProjectReference Include="..\Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer\Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer.csproj" />
+    <ProjectReference Include="..\Jobtech.Openplatforms.GigDataApi.PlatformIntegrations.GigPlatform\Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform.csproj" />
+  </ItemGroup>
+
+</Project>
