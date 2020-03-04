@@ -45,6 +45,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 configApp.AddJsonFile(
                     $"appsettings.{hostContext.HostingEnvironment.EnvironmentName}.json",
                     optional: true);
+                configApp.AddJsonFile("secrets/appsettings.secrets.json", optional: true);
 
                 configApp.AddEnvironmentVariables();
             }).ConfigureWebJobs(configWebjob =>
@@ -123,6 +124,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 var urls = new List<string>();
                 ravenDbSection.GetSection("Urls").Bind(urls);
                 var databaseName = ravenDbSection.GetValue<string>("DatabaseName");
+                var certThumbprint = ravenDbSection.GetValue<string>("CertificateThumbprint");
 
                 logger.LogInformation($"Will use the following database name: '{databaseName}'");
                 logger.LogInformation($"Will use the following database urls: {string.Join(", ", urls)}");
@@ -130,6 +132,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 DocumentStoreHolder.Logger = logger;
                 DocumentStoreHolder.Urls = urls.ToArray();
                 DocumentStoreHolder.DatabaseName = databaseName;
+                DocumentStoreHolder.CertificateThumbprint = certThumbprint;
                 DocumentStoreHolder.IsDevelopment = hostContext.HostingEnvironment.IsDevelopment();
                 DocumentStoreHolder.TypeInAssemblyContainingIndexesToCreate =
                     typeof(Users_ByPlatformConnectionPossiblyRipeForDataFetch);

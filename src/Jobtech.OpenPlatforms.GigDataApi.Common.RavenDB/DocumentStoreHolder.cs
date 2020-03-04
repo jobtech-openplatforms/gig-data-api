@@ -12,6 +12,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB
         public static bool IsDevelopment { get; set; }
         public static ILogger Logger { get; set; }
         public static string[] Urls { get; set; }
+        public static string CertificateThumbprint { get; set; }
         public static string DatabaseName { get; set; }
         public static Type TypeInAssemblyContainingIndexesToCreate { get; set; }
 
@@ -72,18 +73,21 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB
 
         private static X509Certificate2 GetCert()
         {
-            var certStore = new X509Store(StoreName.My, StoreLocation.CurrentUser);
-            certStore.Open(OpenFlags.ReadOnly);
-            var certCollection = certStore.Certificates.Find(
-                X509FindType.FindByThumbprint,
-                "D249EC57413D2ABDB3E23B7EC8408EF4E7BEF8D8",
-                false);
+            //var bytes = System.IO.File.ReadAllBytes($"/var/ssl/private/{CertificateThumbprint}.p12");
+            //var cert = new X509Certificate2(bytes);
+            
+            //var certStore = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+            //certStore.Open(OpenFlags.ReadOnly);
+            //var certCollection = certStore.Certificates.Find(
+            //    X509FindType.FindByThumbprint,
+            //    "D249EC57413D2ABDB3E23B7EC8408EF4E7BEF8D8",
+            //    false);
 
-            var cert = certCollection[0];
+            //var cert = certCollection[0];
 
-            certStore.Close();
+            //certStore.Close();
 
-            return cert;
+            return null;
         }
     }
 }
