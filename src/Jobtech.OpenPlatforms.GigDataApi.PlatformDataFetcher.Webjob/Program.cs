@@ -121,30 +121,30 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 }
 
 
-                try
-                {
-                    var ravenDbSection = hostContext.Configuration.GetSection("RavenDb");
-                    var urls = new List<string>();
-                    ravenDbSection.GetSection("Urls").Bind(urls);
-                    var databaseName = ravenDbSection.GetValue<string>("DatabaseName");
-                    var certThumbprint = ravenDbSection.GetValue<string>("CertificateThumbprint");
+                //try
+                //{
+                //    var ravenDbSection = hostContext.Configuration.GetSection("RavenDb");
+                //    var urls = new List<string>();
+                //    ravenDbSection.GetSection("Urls").Bind(urls);
+                //    var databaseName = ravenDbSection.GetValue<string>("DatabaseName");
+                //    var certThumbprint = ravenDbSection.GetValue<string>("CertificateThumbprint");
 
-                    logger.LogInformation($"Will use the following database name: '{databaseName}'");
-                    logger.LogInformation($"Will use the following database urls: {string.Join(", ", urls)}");
+                //    logger.LogInformation($"Will use the following database name: '{databaseName}'");
+                //    logger.LogInformation($"Will use the following database urls: {string.Join(", ", urls)}");
 
-                    DocumentStoreHolder.Logger = logger;
-                    DocumentStoreHolder.Urls = urls.ToArray();
-                    DocumentStoreHolder.DatabaseName = databaseName;
-                    DocumentStoreHolder.CertificateThumbprint = certThumbprint;
-                    DocumentStoreHolder.IsDevelopment = hostContext.HostingEnvironment.IsDevelopment();
-                    DocumentStoreHolder.TypeInAssemblyContainingIndexesToCreate =
-                        typeof(Users_ByPlatformConnectionPossiblyRipeForDataFetch);
-                    services.AddSingleton<IDocumentStore>(DocumentStoreHolder.Store);
-                }
-                catch (Exception e)
-                {
-                    logger.LogError(e, "Got error configuring database.");
-                }
+                //    DocumentStoreHolder.Logger = logger;
+                //    DocumentStoreHolder.Urls = urls.ToArray();
+                //    DocumentStoreHolder.DatabaseName = databaseName;
+                //    DocumentStoreHolder.CertificateThumbprint = certThumbprint;
+                //    DocumentStoreHolder.IsDevelopment = hostContext.HostingEnvironment.IsDevelopment();
+                //    DocumentStoreHolder.TypeInAssemblyContainingIndexesToCreate =
+                //        typeof(Users_ByPlatformConnectionPossiblyRipeForDataFetch);
+                //    services.AddSingleton<IDocumentStore>(DocumentStoreHolder.Store);
+                //}
+                //catch (Exception e)
+                //{
+                //    logger.LogError(e, "Got error configuring database.");
+                //}
 
             });
 
