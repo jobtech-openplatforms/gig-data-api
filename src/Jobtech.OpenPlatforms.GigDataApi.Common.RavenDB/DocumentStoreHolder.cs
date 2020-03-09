@@ -73,21 +73,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB
 
         private static X509Certificate2 GetCert()
         {
-            //var bytes = System.IO.File.ReadAllBytes($"/var/ssl/private/{CertificateThumbprint}.p12");
-            //var cert = new X509Certificate2(bytes);
-            
-            //var certStore = new X509Store(StoreName.My, StoreLocation.CurrentUser);
-            //certStore.Open(OpenFlags.ReadOnly);
-            //var certCollection = certStore.Certificates.Find(
-            //    X509FindType.FindByThumbprint,
-            //    "D249EC57413D2ABDB3E23B7EC8408EF4E7BEF8D8",
-            //    false);
+            var bytes = System.IO.File.ReadAllBytes($"/app/secrets/certs/cvdata_client_cert.p12");
+            var cert = new X509Certificate2(bytes);
 
-            //var cert = certCollection[0];
-
-            //certStore.Close();
-
-            return null;
+            return cert;
         }
     }
 }

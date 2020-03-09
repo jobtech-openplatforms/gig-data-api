@@ -72,12 +72,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 services.AddCVDataEngineDataFetching(hostContext.Configuration);
                 services.AddCVDataEnginePlatformAuthentication(hostContext.Configuration);
 
-                var serviceBusConnectionString = hostContext.Configuration.GetConnectionString("ServiceBus");
-                logger.LogInformation($"Have the following ServiceBus connection string: '{serviceBusConnectionString}'");
-
                 services.AutoRegisterHandlersFromAssemblyOf<DataFetchCompleteHandler>();
                 services.AutoRegisterHandlersFromAssemblyOf<DataFetchCompleteMessageHandler>(); //Gigplatform data update handler.
 
+                var serviceBusConnectionString = hostContext.Configuration.GetConnectionString("ServiceBus");
                 var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
                 services.AddRebus(c =>
                     c
@@ -122,30 +120,23 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 }
 
 
-                //try
-                //{
-                //    var ravenDbSection = hostContext.Configuration.GetSection("RavenDb");
-                //    var urls = new List<string>();
-                //    ravenDbSection.GetSection("Urls").Bind(urls);
-                //    var databaseName = ravenDbSection.GetValue<string>("DatabaseName");
-                //    var certThumbprint = ravenDbSection.GetValue<string>("CertificateThumbprint");
+                var ravenDbSection = hostContext.Configuration.GetSection("RavenDb");
+                var urls = new List<string>();
+                ravenDbSection.GetSection("Urls").Bind(urls);
+                var databaseName = ravenDbSection.GetValue<string>("DatabaseName");
+                var certThumbprint = ravenDbSection.GetValue<string>("CertificateThumbprint");
 
-                //    logger.LogInformation($"Will use the following database name: '{databaseName}'");
-                //    logger.LogInformation($"Will use the following database urls: {string.Join(", ", urls)}");
+                logger.LogInformation($"Will use the following database name: '{databaseName}'");
+                logger.LogInformation($"Will use the following database urls: {string.Join(", ", urls)}");
 
-                //    DocumentStoreHolder.Logger = logger;
-                //    DocumentStoreHolder.Urls = urls.ToArray();
-                //    DocumentStoreHolder.DatabaseName = databaseName;
-                //    DocumentStoreHolder.CertificateThumbprint = certThumbprint;
-                //    DocumentStoreHolder.IsDevelopment = hostContext.HostingEnvironment.IsDevelopment();
-                //    DocumentStoreHolder.TypeInAssemblyContainingIndexesToCreate =
-                //        typeof(Users_ByPlatformConnectionPossiblyRipeForDataFetch);
-                //    services.AddSingleton<IDocumentStore>(DocumentStoreHolder.Store);
-                //}
-                //catch (Exception e)
-                //{
-                //    logger.LogError(e, "Got error configuring database.");
-                //}
+                DocumentStoreHolder.Logger = logger;
+                DocumentStoreHolder.Urls = urls.ToArray();
+                DocumentStoreHolder.DatabaseName = databaseName;
+                DocumentStoreHolder.CertificateThumbprint = certThumbprint;
+                DocumentStoreHolder.IsDevelopment = hostContext.HostingEnvironment.IsDevelopment();
+                DocumentStoreHolder.TypeInAssemblyContainingIndexesToCreate =
+                    typeof(Users_ByPlatformConnectionPossiblyRipeForDataFetch);
+                services.AddSingleton<IDocumentStore>(DocumentStoreHolder.Store);
 
             });
 
@@ -154,9 +145,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
             using (host)
             {
                 var logger = host.Services.GetRequiredService<ILogger<Program>>();
-                //logger.LogInformation("Will start Rebus");
-
-                //host.Services.UseRebus();
 
                 logger.LogInformation("Setting up handler for unhandled exceptions.");
                 var currentDomain = AppDomain.CurrentDomain;
@@ -165,6 +153,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                     var exception = (Exception)eventArgs.ExceptionObject;
                     logger.LogError(exception, "Got unhandled exception");
                 };
+
+                logger.LogInformation("Will start Rebus");
+                host.Services.UseRebus();
 
                 logger.LogInformation("Starting host.");
                 host.Run();
