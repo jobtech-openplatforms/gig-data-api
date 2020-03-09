@@ -46,7 +46,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 configApp.AddJsonFile(
                     $"appsettings.{hostContext.HostingEnvironment.EnvironmentName}.json",
                     optional: true);
-                configApp.AddJsonFile("secrets/appsettings.secrets.json", optional: true);
+                configApp.AddJsonFile("/app/secrets/appsettings.secrets.json", optional: true);
 
                 configApp.AddEnvironmentVariables();
             }).ConfigureWebJobs(configWebjob =>
