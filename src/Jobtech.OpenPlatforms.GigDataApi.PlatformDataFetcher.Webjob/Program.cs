@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
@@ -144,6 +145,15 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
             using (host)
             {
                 host.Services.UseRebus();
+
+                var logger = host.Services.GetRequiredService<ILogger<Program>>();
+                var currentDomain = AppDomain.CurrentDomain;
+                currentDomain.UnhandledException += (sender, eventArgs) =>
+                {
+                    var exception = (Exception)eventArgs.ExceptionObject;
+                    logger.LogError(exception, "Got unhandled exception");
+                };
+
                 host.Run();
             }
         }
