@@ -153,9 +153,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
             using (host)
             {
                 var logger = host.Services.GetRequiredService<ILogger<Program>>();
-                logger.LogInformation("Will start Rebus");
+                //logger.LogInformation("Will start Rebus");
 
-                host.Services.UseRebus();
+                //host.Services.UseRebus();
 
                 logger.LogInformation("Setting up handler for unhandled exceptions.");
                 var currentDomain = AppDomain.CurrentDomain;
