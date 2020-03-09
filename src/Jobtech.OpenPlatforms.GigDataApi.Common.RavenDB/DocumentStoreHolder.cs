@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Security;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
@@ -12,9 +13,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB
         public static bool IsDevelopment { get; set; }
         public static ILogger Logger { get; set; }
         public static string[] Urls { get; set; }
-        public static string CertificateThumbprint { get; set; }
         public static string DatabaseName { get; set; }
         public static Type TypeInAssemblyContainingIndexesToCreate { get; set; }
+        public static string CertPwd { get; set; }
+        public static string CertPath { get; set; }
 
         public static IDocumentStore Store => _store.Value;
 
@@ -73,8 +75,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB
 
         private static X509Certificate2 GetCert()
         {
-            var bytes = System.IO.File.ReadAllBytes($"/app/certs/tls.crt");
-            var cert = new X509Certificate2(bytes);
+            var bytes = System.IO.File.ReadAllBytes(CertPath);
+            var cert = new X509Certificate2(bytes, CertPwd, X509KeyStorageFlags.MachineKeySet);
 
             return cert;
         }

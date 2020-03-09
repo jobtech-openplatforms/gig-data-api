@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Security;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.IoC;
@@ -47,6 +48,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                     $"appsettings.{hostContext.HostingEnvironment.EnvironmentName}.json",
                     optional: true);
                 configApp.AddJsonFile("/app/secrets/appsettings.secrets.json", optional: true);
+                configApp.AddJsonFile("appsettings.local.json", optional: true,
+                    reloadOnChange: false); //load local settings
 
                 configApp.AddEnvironmentVariables();
             }).ConfigureWebJobs(configWebjob =>
@@ -124,7 +127,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 var urls = new List<string>();
                 ravenDbSection.GetSection("Urls").Bind(urls);
                 var databaseName = ravenDbSection.GetValue<string>("DatabaseName");
-                var certThumbprint = ravenDbSection.GetValue<string>("CertificateThumbprint");
+                var certPwd = ravenDbSection.GetValue<string>("CertPwd");
+                var certPath = ravenDbSection.GetValue<string>("CertPath");
 
                 logger.LogInformation($"Will use the following database name: '{databaseName}'");
                 logger.LogInformation($"Will use the following database urls: {string.Join(", ", urls)}");
@@ -132,8 +136,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 DocumentStoreHolder.Logger = logger;
                 DocumentStoreHolder.Urls = urls.ToArray();
                 DocumentStoreHolder.DatabaseName = databaseName;
-                DocumentStoreHolder.CertificateThumbprint = certThumbprint;
-                DocumentStoreHolder.IsDevelopment = hostContext.HostingEnvironment.IsDevelopment();
+                DocumentStoreHolder.CertPwd = certPwd;
+                DocumentStoreHolder.CertPath = certPath;
+                DocumentStoreHolder.IsDevelopment = false; // hostContext.HostingEnvironment.IsDevelopment();
                 DocumentStoreHolder.TypeInAssemblyContainingIndexesToCreate =
                     typeof(Users_ByPlatformConnectionPossiblyRipeForDataFetch);
                 services.AddSingleton<IDocumentStore>(DocumentStoreHolder.Store);
