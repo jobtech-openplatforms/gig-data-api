@@ -73,6 +73,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 services.AddCVDataEnginePlatformAuthentication(hostContext.Configuration);
 
                 var serviceBusConnectionString = hostContext.Configuration.GetConnectionString("ServiceBus");
+                logger.LogInformation($"Have the following ServiceBus connection string: '{serviceBusConnectionString}'");
 
                 services.AutoRegisterHandlersFromAssemblyOf<DataFetchCompleteHandler>();
                 services.AutoRegisterHandlersFromAssemblyOf<DataFetchCompleteMessageHandler>(); //Gigplatform data update handler.
