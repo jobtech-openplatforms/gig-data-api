@@ -76,9 +76,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB
 
         private static X509Certificate2 GetCert()
         {
-            var bytes = System.IO.File.ReadAllBytes(CertPath);
+            //var bytes = System.IO.File.ReadAllBytes(CertPath);
 
-            var cert = new X509Certificate2(bytes, CertPwd);
+            var cert = new X509Certificate2(CertPath, CertPwd);
 
             return cert;
         }
