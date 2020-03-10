@@ -123,25 +123,25 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 }
 
 
-                var ravenDbSection = hostContext.Configuration.GetSection("RavenDb");
-                var urls = new List<string>();
-                ravenDbSection.GetSection("Urls").Bind(urls);
-                var databaseName = ravenDbSection.GetValue<string>("DatabaseName");
-                var certPwd = ravenDbSection.GetValue<string>("CertPwd");
-                var certPath = ravenDbSection.GetValue<string>("CertPath");
+                //var ravenDbSection = hostContext.Configuration.GetSection("RavenDb");
+                //var urls = new List<string>();
+                //ravenDbSection.GetSection("Urls").Bind(urls);
+                //var databaseName = ravenDbSection.GetValue<string>("DatabaseName");
+                //var certPwd = ravenDbSection.GetValue<string>("CertPwd");
+                //var certPath = ravenDbSection.GetValue<string>("CertPath");
 
-                logger.LogInformation($"Will use the following database name: '{databaseName}'");
-                logger.LogInformation($"Will use the following database urls: {string.Join(", ", urls)}");
+                //logger.LogInformation($"Will use the following database name: '{databaseName}'");
+                //logger.LogInformation($"Will use the following database urls: {string.Join(", ", urls)}");
 
-                DocumentStoreHolder.Logger = logger;
-                DocumentStoreHolder.Urls = urls.ToArray();
-                DocumentStoreHolder.DatabaseName = databaseName;
-                DocumentStoreHolder.CertPwd = certPwd;
-                DocumentStoreHolder.CertPath = certPath;
-                DocumentStoreHolder.IsDevelopment = false; // hostContext.HostingEnvironment.IsDevelopment();
-                DocumentStoreHolder.TypeInAssemblyContainingIndexesToCreate =
-                    typeof(Users_ByPlatformConnectionPossiblyRipeForDataFetch);
-                services.AddSingleton<IDocumentStore>(DocumentStoreHolder.Store);
+                //DocumentStoreHolder.Logger = logger;
+                //DocumentStoreHolder.Urls = urls.ToArray();
+                //DocumentStoreHolder.DatabaseName = databaseName;
+                //DocumentStoreHolder.CertPwd = certPwd;
+                //DocumentStoreHolder.CertPath = certPath;
+                //DocumentStoreHolder.IsDevelopment = false; // hostContext.HostingEnvironment.IsDevelopment();
+                //DocumentStoreHolder.TypeInAssemblyContainingIndexesToCreate =
+                //    typeof(Users_ByPlatformConnectionPossiblyRipeForDataFetch);
+                //services.AddSingleton<IDocumentStore>(DocumentStoreHolder.Store);
 
             });
 
@@ -159,8 +159,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                     logger.LogError(exception, "Got unhandled exception");
                 };
 
-                logger.LogInformation("Will start Rebus");
-                host.Services.UseRebus();
+                //logger.LogInformation("Will start Rebus");
+                //host.Services.UseRebus();
 
                 logger.LogInformation("Starting host.");
                 host.Run();
