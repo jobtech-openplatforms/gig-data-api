@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -75,8 +76,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB
 
         private static X509Certificate2 GetCert()
         {
-            var bytes = System.IO.File.ReadAllBytes(CertPath);
-            var cert = new X509Certificate2(bytes, CertPwd, X509KeyStorageFlags.MachineKeySet);
+            var cert = new X509Certificate2(CertPath, CertPwd,
+                X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
 
             return cert;
         }
