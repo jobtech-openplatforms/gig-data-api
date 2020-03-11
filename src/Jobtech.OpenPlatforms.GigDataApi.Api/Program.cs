@@ -7,6 +7,7 @@ using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
@@ -25,7 +26,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
             //init database if needed
             using (var scope = webHost.Services.CreateScope())
             {
-                var hostingEnvironment = scope.ServiceProvider.GetRequiredService<IHostingEnvironment>();
+                var hostingEnvironment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
                 if (hostingEnvironment.IsDevelopment())
                 {
                     var dataStore = scope.ServiceProvider.GetRequiredService<IDocumentStore>();

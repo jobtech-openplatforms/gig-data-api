@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Security;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -18,6 +17,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB
         public static Type TypeInAssemblyContainingIndexesToCreate { get; set; }
         public static string CertPwd { get; set; }
         public static string CertPath { get; set; }
+        public static string KeyPath { get; set; }
 
         public static IDocumentStore Store => _store.Value;
 
@@ -76,11 +76,43 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB
 
         private static X509Certificate2 GetCert()
         {
-            //var bytes = System.IO.File.ReadAllBytes(CertPath);
+            var cert = new X509Certificate2(CertPath);
+            var privateKey = ReadKeyFromFile(KeyPath);
 
-            var cert = new X509Certificate2(CertPath, CertPwd);
+            var certWithPrivateKey = cert.CopyWithPrivateKey(privateKey);
 
-            return cert;
+            var certWithCredentials = new X509Certificate2(certWithPrivateKey.Export(X509ContentType.Pfx, CertPwd), CertPwd);
+
+            return certWithCredentials;
+        }
+
+        private static RSA ReadKeyFromFile(string filename)
+        {
+            var pemContents = System.IO.File.ReadAllText(filename);
+            const string rsaPrivateKeyHeader = "-----BEGIN RSA PRIVATE KEY-----";
+            const string rsaPrivateKeyFooter = "-----END RSA PRIVATE KEY-----";
+
+            if (!pemContents.Contains(rsaPrivateKeyHeader)) throw new InvalidOperationException();
+            
+            var startIdx = pemContents.IndexOf(rsaPrivateKeyHeader, StringComparison.Ordinal) + rsaPrivateKeyHeader.Length + 1;
+
+            var endIdx = pemContents.IndexOf(
+                rsaPrivateKeyFooter,
+                rsaPrivateKeyHeader.Length,
+                StringComparison.Ordinal);
+
+            var length = endIdx - startIdx;
+
+            var base64 = pemContents.Substring(
+                startIdx,
+                length);
+
+            var der = Convert.FromBase64String(base64);
+
+            var rsa = RSA.Create();
+            rsa.ImportRSAPrivateKey(der, out _);
+            return rsa;
+
         }
     }
 }

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using System.Security;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.IoC;
@@ -129,6 +128,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 var databaseName = ravenDbSection.GetValue<string>("DatabaseName");
                 var certPwd = ravenDbSection.GetValue<string>("CertPwd");
                 var certPath = ravenDbSection.GetValue<string>("CertPath");
+                var keyPath = ravenDbSection.GetValue<string>("KeyPath");
 
                 logger.LogInformation($"Will use the following database name: '{databaseName}'");
                 logger.LogInformation($"Will use the following database urls: {string.Join(", ", urls)}");
@@ -138,6 +138,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 DocumentStoreHolder.DatabaseName = databaseName;
                 DocumentStoreHolder.CertPwd = certPwd;
                 DocumentStoreHolder.CertPath = certPath;
+                DocumentStoreHolder.KeyPath = keyPath;
                 DocumentStoreHolder.IsDevelopment = false; // hostContext.HostingEnvironment.IsDevelopment();
                 DocumentStoreHolder.TypeInAssemblyContainingIndexesToCreate =
                     typeof(Users_ByPlatformConnectionPossiblyRipeForDataFetch);
