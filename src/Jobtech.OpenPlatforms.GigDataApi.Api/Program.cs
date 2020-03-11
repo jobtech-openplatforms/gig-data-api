@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Core;
@@ -6,11 +7,13 @@ using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Rebus.ServiceProvider;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Api
 {
@@ -21,22 +24,36 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
             var webHost = CreateWebHostBuilder(args).ConfigureLogging(configure =>
             {
                 //configure.AddConsole();
+            }).ConfigureAppConfiguration((hostContext, configApp) =>
+            {
+                configApp.SetBasePath(Directory.GetCurrentDirectory());
+                configApp.AddJsonFile("appsettings.json", false, true);
+                configApp.AddJsonFile(
+                    $"appsettings.{hostContext.HostingEnvironment.EnvironmentName}.json",
+                    optional: true);
+                configApp.AddJsonFile("/app/secrets/appsettings.secrets.json", optional: true);
+                configApp.AddJsonFile("appsettings.local.json", optional: true,
+                    reloadOnChange: false); //load local settings
+
+                configApp.AddEnvironmentVariables();
             }).Build();
 
             //init database if needed
-            using (var scope = webHost.Services.CreateScope())
-            {
-                var hostingEnvironment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
-                if (hostingEnvironment.IsDevelopment())
-                {
-                    var dataStore = scope.ServiceProvider.GetRequiredService<IDocumentStore>();
-                    var platformManager = scope.ServiceProvider.GetRequiredService<IPlatformManager>();
-                    var appManager = scope.ServiceProvider.GetRequiredService<IAppManager>();
-                    var optionsMonitor = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<Options>>();
-                    var testDataSetup = new BaseTestDataSetup(platformManager, appManager, optionsMonitor, dataStore);
-                    await testDataSetup.SetupDataAsNeeded();
-                }
-            }
+            //using (var scope = webHost.Services.CreateScope())
+            //{
+            //    var hostingEnvironment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+            //    if (hostingEnvironment.IsDevelopment())
+            //    {
+            //        var dataStore = scope.ServiceProvider.GetRequiredService<IDocumentStore>();
+            //        var platformManager = scope.ServiceProvider.GetRequiredService<IPlatformManager>();
+            //        var appManager = scope.ServiceProvider.GetRequiredService<IAppManager>();
+            //        var optionsMonitor = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<Options>>();
+            //        var testDataSetup = new BaseTestDataSetup(platformManager, appManager, optionsMonitor, dataStore);
+            //        await testDataSetup.SetupDataAsNeeded();
+            //    }
+            //}
+
+            webHost.Services.UseRebus();
 
             await webHost.RunAsync();
         }

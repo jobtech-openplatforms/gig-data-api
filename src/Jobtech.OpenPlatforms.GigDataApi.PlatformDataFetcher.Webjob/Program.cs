@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.IoC;
@@ -12,10 +13,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.ApplicationInsights;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents;
+using Rebus.Bus;
 using Rebus.Config;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
@@ -26,7 +27,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             var builder = new HostBuilder();
 
@@ -59,11 +60,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
             {
                 configLogging.AddConsole();
                 configLogging.SetMinimumLevel(LogLevel.Trace);
-                if (!hostContext.HostingEnvironment.IsDevelopment())
-                {
-                    configLogging.AddFilter<ApplicationInsightsLoggerProvider>("", LogLevel.Trace);
-                    configLogging.AddApplicationInsights();
-                }
             }).ConfigureServices((hostContext, services) =>
             {
 
@@ -163,8 +159,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 logger.LogInformation("Will start Rebus");
                 host.Services.UseRebus();
 
+                var bus = host.Services.GetRequiredService<IBus>();
+                var message = new PlatformDataFetcherTriggerMessage();
+                await bus.SendLocal(message);
+
                 logger.LogInformation("Starting host.");
-                host.Run();
+                await host.RunAsync();
             }
         }
     }

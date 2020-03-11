@@ -15,8 +15,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.ApplicationInsights;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Rebus.Config;
@@ -75,18 +75,18 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
 
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new Info
+                c.SwaggerDoc("v1", new OpenApiInfo
                 {
                     Title = "GigData Api", 
                     Version = "v1",
-                    Contact = new Contact
+                    Contact = new OpenApiContact
                     {
                         Email = "bjorn@roombler.com",
                         Name = "Björn Milton"
                     },
                     Description = "The GigData Api is intended to be used by parties that in different ways wants to access a users gig data with the consent of the user."
                 });
-                c.DescribeAllEnumsAsStrings();
+                c.DescribeAllParametersInCamelCase();
 
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
@@ -103,19 +103,22 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
             services.AddLogging(loggingBuilder =>
             {
                 //loggingBuilder.AddConsole();
-                loggingBuilder.AddFilter<ApplicationInsightsLoggerProvider>("", LogLevel.Trace);
-                loggingBuilder.AddApplicationInsights("46cfb5c1-40f3-4b50-b234-159a06cc7aab");
             });
-            services.AddApplicationInsightsTelemetry("46cfb5c1-40f3-4b50-b234-159a06cc7aab");
 
             var ravenDbSection = Configuration.GetSection("RavenDb");
             var urls = new List<string>();
             ravenDbSection.GetSection("Urls").Bind(urls);
             var databaseName = ravenDbSection.GetValue<string>("DatabaseName");
+            var certPwd = ravenDbSection.GetValue<string>("CertPwd");
+            var certPath = ravenDbSection.GetValue<string>("CertPath");
+            var keyPath = ravenDbSection.GetValue<string>("KeyPath");
 
             DocumentStoreHolder.Urls = urls.ToArray();
             DocumentStoreHolder.DatabaseName = databaseName;
-            DocumentStoreHolder.IsDevelopment = HostingEnvironment.IsDevelopment();
+            DocumentStoreHolder.CertPwd = certPwd;
+            DocumentStoreHolder.CertPath = certPath;
+            DocumentStoreHolder.KeyPath = keyPath;
+            DocumentStoreHolder.IsDevelopment = false; //HostingEnvironment.IsDevelopment();
             services.AddSingleton<IDocumentStore>(DocumentStoreHolder.Store);
 
             //Setup options for the app
@@ -162,9 +165,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
                 options.AllowAnyMethod();
             });
 
+            app.UseRouting();
+
             app.UseApiExceptionHandler();
 
             app.UseAuthentication();
+            app.UseAuthorization();
 
             app.UseSwagger();
 
@@ -174,7 +180,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
                 c.RoutePrefix = string.Empty;
             });
 
-            app.UseRebus();
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+            });
         }
     }
 
