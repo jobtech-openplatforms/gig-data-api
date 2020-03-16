@@ -22,6 +22,7 @@ using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
 using Rebus.ServiceProvider;
+using Serilog;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
 {
@@ -58,8 +59,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 configWebjob.AddTimers();
             }).ConfigureLogging((hostContext, configLogging) =>
             {
-                configLogging.AddConsole();
-                configLogging.SetMinimumLevel(LogLevel.Trace);
+                Log.Logger = new LoggerConfiguration()
+                    .ReadFrom.Configuration(hostContext.Configuration)
+                    .CreateLogger();
+                configLogging.AddSerilog(dispose: true);
             }).ConfigureServices((hostContext, services) =>
             {
 
@@ -88,7 +91,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                             o.SetNumberOfWorkers(1);
                             o.SetMaxParallelism(1);
                         })
-                        .Logging(l => l.MicrosoftExtensionsLogging(loggerFactory))
+                        .Logging(l => l.Serilog())
                         .Routing(r => r.TypeBased()
                             .Map<PlatformConnectionUpdateNotificationMessage>("platformconnection.update")).Serialization(
                             s =>
