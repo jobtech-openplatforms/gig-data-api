@@ -107,12 +107,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             }
         }
 
-        public async Task<PlatformConnectionStartResult> ConnectUserToEmailPlatform(Guid exterenalPlatformId, User user, App app,
+        public async Task<PlatformConnectionStartResult> ConnectUserToEmailPlatform(Guid externalPlatformId, User user, App app,
             string userPlatformEmailAddress, IAsyncDocumentSession session, bool emailIsValidated = false)
         {
             userPlatformEmailAddress = userPlatformEmailAddress.ToLowerInvariant();
 
-            var platform = await _platformManager.GetPlatformByExternalId(exterenalPlatformId, session);
+            var platform = await _platformManager.GetPlatformByExternalId(externalPlatformId, session);
 
             if (platform.AuthenticationMechanism != PlatformAuthenticationMechanism.Email)
             {

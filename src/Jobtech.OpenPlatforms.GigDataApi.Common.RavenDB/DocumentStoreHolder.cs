@@ -10,7 +10,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB
     public class DocumentStoreHolder
     {
         private static Lazy<IDocumentStore> _store = new Lazy<IDocumentStore>(CreateStore);
-        public static bool IsDevelopment { get; set; }
         public static ILogger Logger { get; set; }
         public static string[] Urls { get; set; }
         public static string DatabaseName { get; set; }
@@ -25,9 +24,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB
         {
             IDocumentStore store = null;
 
-            if (IsDevelopment)
+            var useCert = !string.IsNullOrEmpty(CertPath) || !string.IsNullOrEmpty(KeyPath) ||
+                          !string.IsNullOrEmpty(CertPwd);
+
+            if (!useCert)
             {
-                Logger?.LogTrace("Will init DocumentStore for development");
+                Logger?.LogTrace("Will init DocumentStore WITHOUT certificate authorization.");
                 try
                 {
                     store = new DocumentStore()
@@ -44,7 +46,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB
             }
             else
             {
-                Logger?.LogTrace("Will init DocumentStore for non development");
+                Logger?.LogTrace("Will init DocumentStore WITH certificate authorization.");
 
                 try
                 {

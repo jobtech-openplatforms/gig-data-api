@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.IoC;
+using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Configuration;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Indexes;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHandlers;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform;
@@ -23,6 +24,7 @@ using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
 using Rebus.ServiceProvider;
 using Serilog;
+using Serilog.Formatting.Elasticsearch;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
 {
@@ -59,13 +61,22 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 configWebjob.AddTimers();
             }).ConfigureLogging((hostContext, configLogging) =>
             {
-                Log.Logger = new LoggerConfiguration()
-                    .ReadFrom.Configuration(hostContext.Configuration)
-                    .CreateLogger();
+                var formatElastic = hostContext.Configuration.GetValue("FormatLogsInElasticFormat", false);
+
+                var logConf = new LoggerConfiguration()
+                    .ReadFrom.Configuration(hostContext.Configuration);
+
+                if (formatElastic)
+                {
+                    var logFormatter = new ExceptionAsObjectJsonFormatter(renderMessage: true);
+                    logConf.WriteTo.Console(logFormatter);
+                }
+
+                Log.Logger = logConf.CreateLogger();
+
                 configLogging.AddSerilog(dispose: true);
             }).ConfigureServices((hostContext, services) =>
             {
-
                 var serviceProvider = services.BuildServiceProvider();
                 var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
@@ -76,17 +87,25 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 services.AutoRegisterHandlersFromAssemblyOf<DataFetchCompleteHandler>();
                 services.AutoRegisterHandlersFromAssemblyOf<DataFetchCompleteMessageHandler>(); //Gigplatform data update handler.
 
+                var rebusSection = hostContext.Configuration.GetSection("Rebus");
+                var inputQueueName = rebusSection.GetValue<string>("InputQueueName");
+                var errorQueueName = rebusSection.GetValue<string>("ErrorQueueName");
+                services.Configure<RebusConfiguration>(c =>
+                {
+                    c.InputQueueName = inputQueueName;
+                    c.ErrorQueueName = errorQueueName;
+                });
+
                 var serviceBusConnectionString = hostContext.Configuration.GetConnectionString("ServiceBus");
-                var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
                 services.AddRebus(c =>
                     c
                         .Transport(t =>
                             t.UseAzureServiceBus(
                                 serviceBusConnectionString,
-                                "platformdatafetcher.input"))
+                                inputQueueName))
                         .Options(o =>
                         {
-                            o.SimpleRetryStrategy(errorQueueAddress: "platformdatafetcher.error",
+                            o.SimpleRetryStrategy(errorQueueAddress: errorQueueName,
                                 secondLevelRetriesEnabled: true);
                             o.SetNumberOfWorkers(1);
                             o.SetMaxParallelism(1);
@@ -138,7 +157,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 DocumentStoreHolder.CertPwd = certPwd;
                 DocumentStoreHolder.CertPath = certPath;
                 DocumentStoreHolder.KeyPath = keyPath;
-                DocumentStoreHolder.IsDevelopment = false; // hostContext.HostingEnvironment.IsDevelopment();
                 DocumentStoreHolder.TypeInAssemblyContainingIndexesToCreate =
                     typeof(Users_ByPlatformConnectionPossiblyRipeForDataFetch);
                 services.AddSingleton<IDocumentStore>(DocumentStoreHolder.Store);

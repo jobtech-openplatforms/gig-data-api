@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
@@ -13,22 +14,26 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
     public interface IAppNotificationManager
     {
         Task NotifyEmailValidationDone(string userId, IList<string> appIds, string email, bool wasVerified,
-            IAsyncDocumentSession session);
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default);
 
-        Task NotifyPlatformConnectionAwaitingOAuthAuthentication(string userId, IList<string> appIds, string platformId, Guid externalPlatformId, string platformName,
-            IAsyncDocumentSession session);
+        Task NotifyPlatformConnectionAwaitingOAuthAuthentication(string userId, IList<string> appIds, string platformId,
+            Guid externalPlatformId, string platformName,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default);
 
-        Task NotifyPlatformConnectionAwaitingEmailVerification(string userId, IList<string> appIds, string platformId, Guid externalPlatformId, string platformName,
-            IAsyncDocumentSession session);
+        Task NotifyPlatformConnectionAwaitingEmailVerification(string userId, IList<string> appIds, string platformId,
+            Guid externalPlatformId, string platformName,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default);
 
         Task NotifyPlatformConnectionDataUpdate(string userId, IList<string> appIds,
-            string platformId, Guid externalPlatformId, string platformName, string platformDataId, IAsyncDocumentSession session);
+            string platformId, Guid externalPlatformId, string platformName, string platformDataId,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default);
 
-        Task NotifyPlatformConnectionRemoved(string userId, IList<string> appIds, string platformId, Guid externalPlatformId, string platformName,
-            IAsyncDocumentSession session);
+        Task NotifyPlatformConnectionRemoved(string userId, IList<string> appIds, string platformId,
+            Guid externalPlatformId, string platformName,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default);
     }
 
-    public class AppNotificationManager: IAppNotificationManager
+    public class AppNotificationManager : IAppNotificationManager
     {
         private readonly IBus _bus;
 
@@ -39,54 +44,65 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         }
 
         public async Task NotifyEmailValidationDone(string userId, IList<string> appIds, string email, bool wasVerified,
-            IAsyncDocumentSession session)
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
-            var user = await session.LoadAsync<User>(userId);
-            var apps = await session.LoadAsync<App>(appIds);
+            var user = await session.LoadAsync<User>(userId, cancellationToken);
+            var apps = await session.LoadAsync<App>(appIds, cancellationToken);
 
             foreach (var app in apps.Values)
             {
                 var emailVerificationNotificationEndpoint = app.EmailVerificationNotificationEndpoint;
-                var message = new EmailVerificationNotificationMessage(emailVerificationNotificationEndpoint,app.SecretKey, email,
+                var message = new EmailVerificationNotificationMessage(emailVerificationNotificationEndpoint,
+                    app.SecretKey, email,
                     user.ExternalId, wasVerified);
                 await _bus.Send(message);
             }
         }
 
-        public async Task NotifyPlatformConnectionAwaitingOAuthAuthentication(string userId, IList<string> appIds, string platformId, Guid externalPlatformId, string platformName,
-            IAsyncDocumentSession session)
+        public async Task NotifyPlatformConnectionAwaitingOAuthAuthentication(string userId, IList<string> appIds,
+            string platformId, Guid externalPlatformId, string platformName,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
-            await NotifyPlatformDataUpdate(userId, appIds, platformId, externalPlatformId, platformName, session, null, PlatformConnectionState.AwaitingOAuthAuthentication);
+            await NotifyPlatformDataUpdate(userId, appIds, platformId, externalPlatformId, platformName, session, null,
+                PlatformConnectionState.AwaitingOAuthAuthentication, cancellationToken);
         }
 
-        public async Task NotifyPlatformConnectionAwaitingEmailVerification(string userId, IList<string> appIds, string platformId, Guid externalPlatformId, string platformName,
-            IAsyncDocumentSession session)
+        public async Task NotifyPlatformConnectionAwaitingEmailVerification(string userId, IList<string> appIds,
+            string platformId, Guid externalPlatformId, string platformName,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
-            await NotifyPlatformDataUpdate(userId, appIds, platformId, externalPlatformId, platformName, session, null, PlatformConnectionState.AwaitingEmailVerification);
+            await NotifyPlatformDataUpdate(userId, appIds, platformId, externalPlatformId, platformName, session, null,
+                PlatformConnectionState.AwaitingEmailVerification, cancellationToken);
         }
 
         public async Task NotifyPlatformConnectionDataUpdate(string userId, IList<string> appIds,
-            string platformId, Guid externalPlatformId, string platformName, string platformDataId, IAsyncDocumentSession session)
+            string platformId, Guid externalPlatformId, string platformName, string platformDataId,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
-            await NotifyPlatformDataUpdate(userId, appIds, platformId, externalPlatformId, platformName, session, platformDataId, PlatformConnectionState.Connected);
+            await NotifyPlatformDataUpdate(userId, appIds, platformId, externalPlatformId, platformName, session,
+                platformDataId, PlatformConnectionState.Connected, cancellationToken);
         }
 
-        public async Task NotifyPlatformConnectionRemoved(string userId, IList<string> appIds, string platformId, Guid externalPlatformId, string platformName,
-            IAsyncDocumentSession session)
+        public async Task NotifyPlatformConnectionRemoved(string userId, IList<string> appIds, string platformId,
+            Guid externalPlatformId, string platformName,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
-            await NotifyPlatformDataUpdate(userId, appIds, platformId, externalPlatformId, platformName, session, null, PlatformConnectionState.Removed);
+            await NotifyPlatformDataUpdate(userId, appIds, platformId, externalPlatformId, platformName, session, null,
+                PlatformConnectionState.Removed, cancellationToken);
         }
 
-        private async Task NotifyPlatformDataUpdate(string userId, IList<string> appIds, string platformId, Guid externalPlatformId, string platformName, IAsyncDocumentSession session,
-            string platformDataId = null, PlatformConnectionState connectionState = PlatformConnectionState.Connected)
+        private async Task NotifyPlatformDataUpdate(string userId, IList<string> appIds, string platformId,
+            Guid externalPlatformId, string platformName, IAsyncDocumentSession session,
+            string platformDataId = null, PlatformConnectionState connectionState = PlatformConnectionState.Connected,
+            CancellationToken cancellationToken = default)
         {
-            var user = await session.LoadAsync<User>(userId);
-            var apps = await session.LoadAsync<App>(appIds);
+            var user = await session.LoadAsync<User>(userId, cancellationToken);
+            var apps = await session.LoadAsync<App>(appIds, cancellationToken);
 
             PlatformData data = null;
             if (platformDataId != null)
             {
-                data = await session.LoadAsync<PlatformData>(platformDataId);
+                data = await session.LoadAsync<PlatformData>(platformDataId, cancellationToken);
             }
 
             if (connectionState == PlatformConnectionState.Connected && platformDataId != null)
@@ -105,8 +121,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                     {
                         foreach (var review in data.Reviews)
                         {
-                            var messageReview = new Common.Messages.PlatformReview(review.ReviewIdentifier, review.ReviewText,
-                                review.ReviewerName, review.ReviewHeading, review.ReviewerAvatarUri, review.RatingId, review.ReviewDate);
+                            var messageReview = new Common.Messages.PlatformReview(review.ReviewIdentifier,
+                                review.ReviewText,
+                                review.ReviewerName, review.ReviewHeading, review.ReviewerAvatarUri, review.RatingId,
+                                review.ReviewDate);
                             messageReviews.Add(messageReview);
                         }
                     }
@@ -116,7 +134,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                     {
                         foreach (var rating in data.Ratings)
                         {
-                            var messageRating = new Common.Messages.PlatformRating(rating.Value, rating.Min, rating.Max, rating.SuccessLimit, rating.Identifier);
+                            var messageRating = new Common.Messages.PlatformRating(rating.Value, rating.Min, rating.Max,
+                                rating.SuccessLimit, rating.Identifier);
                             messageRatings.Add(messageRating);
                         }
                     }
@@ -146,7 +165,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                     if (data.AverageRating != null)
                     {
                         messageAverageRating = new Common.Messages.PlatformRating(data.AverageRating.Value,
-                            data.AverageRating.Min, data.AverageRating.Max, data.AverageRating.SuccessLimit, data.AverageRating.Identifier);
+                            data.AverageRating.Min, data.AverageRating.Max, data.AverageRating.SuccessLimit,
+                            data.AverageRating.Identifier);
                     }
 
                     messagePlatformData = new Common.Messages.PlatformData(data.NumberOfGigs, messageAverageRating,
@@ -156,7 +176,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
 
                 var message = new PlatformConnectionUpdateNotificationMessage(app.NotificationEndpoint, app.SecretKey,
-                    platformId, externalPlatformId, platformName, connectionState, user.ExternalId, DateTimeOffset.UtcNow, messagePlatformData);
+                    platformId, externalPlatformId, platformName, connectionState, user.ExternalId,
+                    DateTimeOffset.UtcNow, messagePlatformData);
 
                 await _bus.Send(message);
             }

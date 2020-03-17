@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Common.Exceptions;
+using Jobtech.OpenPlatforms.GigDataApi.Common.Extensions;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core.Models;
@@ -11,7 +14,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
 {
     public interface IGigPlatformDataFetcher : IDataFetcher<OAuthOrEmailPlatformConnectionInfo>
     {
-        Task CompleteDataFetching(string userId, string platformId, PlatformDataFetchResult dataFetchResult);
+        Task CompleteDataFetching(string userId, string platformId, PlatformDataFetchResult dataFetchResult,
+            CancellationToken cancellationToken = default);
     }
 
     public class GigPlatformDataFetcher : DataFetcherBase<OAuthOrEmailPlatformConnectionInfo>, IGigPlatformDataFetcher
@@ -20,7 +24,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
         private readonly ILogger<GigPlatformDataFetcher> _logger;
         private readonly GigPlatformApiClient _apiClient;
 
-        public GigPlatformDataFetcher(IntermittentDataManager intermittentDataManager, GigPlatformApiClient apiClient, IBus bus, ILogger<GigPlatformDataFetcher> logger) : base(bus)
+        public GigPlatformDataFetcher(IntermittentDataManager intermittentDataManager, GigPlatformApiClient apiClient,
+            IBus bus, ILogger<GigPlatformDataFetcher> logger) : base(bus)
         {
             _intermittentDataManager = intermittentDataManager;
             _apiClient = apiClient;
@@ -28,36 +33,47 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
         }
 
         public new async Task<OAuthOrEmailPlatformConnectionInfo> StartDataFetch(string userId, string platformId,
-            OAuthOrEmailPlatformConnectionInfo connectionInfo, PlatformConnection platformConnection)
+            OAuthOrEmailPlatformConnectionInfo connectionInfo, PlatformConnection platformConnection,
+            CancellationToken cancellationToken = default)
         {
-            _logger.LogTrace($"Will start data fetch from Freelancer for user with id {userId}");
+            using var loggerScope = _logger.BeginPropertyScope((LoggerPropertyNames.UserId, userId),
+                (LoggerPropertyNames.PlatformId, platformId), (LoggerPropertyNames.PlatformName, platformConnection.PlatformName));
+
+            _logger.LogInformation("Will start data fetch from Freelancer for user.");
 
             if (connectionInfo.IsOAuthAuthentication)
             {
-                throw new ArgumentException("Oauth connection not yet supported in Gig Platform API",
-                    nameof(connectionInfo));
+                _logger.LogError("Oauth connection not yet supported in Gig Platform API. Will throw.");
+                throw new UnsupportedPlatformConnectionAuthenticationTypeException("Oauth connection not yet supported in Gig Platform API");
             }
 
-            var result = await _apiClient.RequestLatest(platformConnection.ExternalPlatformId, connectionInfo.Email);
+            var result = await _apiClient.RequestLatest(platformConnection.ExternalPlatformId, connectionInfo.Email, cancellationToken);
 
             _logger.LogInformation(
-                $"Did request data fetch against Platform API for platform with name {platformConnection.PlatformName} and external id {platformConnection.ExternalPlatformId}. Got back the following request id: {result.RequestId}");
+                $"Successfully requested data fetch against Platform API for platform.");
 
-            if (!result.Success) //we interpret non success result as a situation where the user has removed consent for us to read the information.
+            if (!result.Success)
             {
-                _logger.LogInformation("User has does not consent that we fetch information. Will remove connection.");
-                await CompleteDataFetchWithConnectionRemoved(userId, platformId);
+                //we interpret non success result as a situation where the user has removed consent for us to read the information.
+                _logger.LogInformation("User has does not consent that we fetch information. Will signal that the connection should be removed.");
+                await CompleteDataFetchWithConnectionRemoved(userId, platformId, cancellationToken);
                 return new OAuthOrEmailPlatformConnectionInfo(connectionInfo.Email) {IsDeleted = true};
             }
 
+            using var innerLoggerScope =
+                _logger.BeginPropertyScope((LoggerPropertyNames.GigPlatformApiRequestId, result.RequestId));
+
             await _intermittentDataManager.RegisterRequestData(result.RequestId, userId, platformId);
+
+            _logger.LogInformation("Data fetch successfully started.");
 
             return connectionInfo;
         }
 
-        public async Task CompleteDataFetching(string userId, string platformId, PlatformDataFetchResult dataFetchResult)
+        public async Task CompleteDataFetching(string userId, string platformId,
+            PlatformDataFetchResult dataFetchResult, CancellationToken cancellationToken = default)
         {
-            await CompleteDataFetch(userId, platformId, dataFetchResult);
+            await CompleteDataFetch(userId, platformId, dataFetchResult, cancellationToken);
         }
     }
 }

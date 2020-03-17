@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core.Messages;
@@ -17,17 +18,20 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core
             _bus = bus;
         }
 
-        public Task<TConnectionInfo> StartDataFetch(string userId, string platformId, TConnectionInfo connectionInfo, PlatformConnection platformConnection)
+        public Task<TConnectionInfo> StartDataFetch(string userId, string platformId, TConnectionInfo connectionInfo,
+            PlatformConnection platformConnection, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
 
-        protected async Task CompleteDataFetch(string userId, string platformId, PlatformDataFetchResult fetchResult)
+        protected async Task CompleteDataFetch(string userId, string platformId, PlatformDataFetchResult fetchResult,
+            CancellationToken cancellationToken = default)
         {
             await _bus.SendLocal(new DataFetchCompleteMessage(userId, platformId, fetchResult));
         }
 
-        protected async Task CompleteDataFetchWithConnectionRemoved(string userId, string platformId)
+        protected async Task CompleteDataFetchWithConnectionRemoved(string userId, string platformId,
+            CancellationToken cancellationToken = default)
         {
             await _bus.SendLocal(new PlatformConnectionRemovedMessage(userId, platformId));
         }

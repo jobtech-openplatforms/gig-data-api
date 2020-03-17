@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core.Models;
@@ -11,15 +12,20 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {
     public interface IPlatformDataManager
     {
-        Task<PlatformData> GetPlatformData(string userId, string platformId, IAsyncDocumentSession session);
-        Task RemovePlatformDataForPlatform(string userId, string platformId, IAsyncDocumentSession session);
+        Task<PlatformData> GetPlatformData(string userId, string platformId, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
+
+        Task RemovePlatformDataForPlatform(string userId, string platformId, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
 
         Task<PlatformData> AddPlatformData(string userId, string platformId, int numberOfGigs,
-            DateTimeOffset? periodStart, DateTimeOffset? periodEnd, IList<RatingDataFetchResult> ratings, RatingDataFetchResult averageRating,
-            IList<ReviewDataFetchResult> reviews, IList<AchievementFetchResult> achievements, string rawData, IAsyncDocumentSession session);
+            DateTimeOffset? periodStart, DateTimeOffset? periodEnd, IList<RatingDataFetchResult> ratings,
+            RatingDataFetchResult averageRating,
+            IList<ReviewDataFetchResult> reviews, IList<AchievementFetchResult> achievements, string rawData,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default);
     }
 
-    public class PlatformDataManager: IPlatformDataManager
+    public class PlatformDataManager : IPlatformDataManager
     {
         private readonly IPlatformManager _platformManager;
 
@@ -28,31 +34,35 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             _platformManager = platformManager;
         }
 
-        public async Task<PlatformData> GetPlatformData(string userId, string platformId, IAsyncDocumentSession session)
+        public async Task<PlatformData> GetPlatformData(string userId, string platformId, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
         {
             return await session.Query<PlatformData>()
-                .SingleOrDefaultAsync(pd => pd.UserId == userId && pd.PlatformId == platformId);
+                .SingleOrDefaultAsync(pd => pd.UserId == userId && pd.PlatformId == platformId, cancellationToken);
         }
 
-        public async Task RemovePlatformDataForPlatform(string userId, string platformId, IAsyncDocumentSession session)
+        public async Task RemovePlatformDataForPlatform(string userId, string platformId, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
         {
-            var existingPlatformData = await GetPlatformData(userId, platformId, session);
+            var existingPlatformData = await GetPlatformData(userId, platformId, session, cancellationToken);
 
             session.Delete(existingPlatformData.Id);
         }
 
         public async Task<PlatformData> AddPlatformData(string userId, string platformId, int numberOfGigs,
-            DateTimeOffset? periodStart, DateTimeOffset? periodEnd, IList<RatingDataFetchResult> ratings, RatingDataFetchResult averageRating,
-            IList<ReviewDataFetchResult> reviews, IList<AchievementFetchResult> achievements, string rawData, IAsyncDocumentSession session)
+            DateTimeOffset? periodStart, DateTimeOffset? periodEnd, IList<RatingDataFetchResult> ratings,
+            RatingDataFetchResult averageRating,
+            IList<ReviewDataFetchResult> reviews, IList<AchievementFetchResult> achievements, string rawData,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
             var platform = await _platformManager.GetPlatform(platformId, session);
 
-            var platformData = await GetPlatformData(userId, platformId, session);
+            var platformData = await GetPlatformData(userId, platformId, session, cancellationToken);
 
             if (platformData == null)
             {
                 platformData = new PlatformData(platform.Id, userId);
-                await session.StoreAsync(platformData);
+                await session.StoreAsync(platformData, cancellationToken);
             }
 
             var rawPlatformData = new RawData(rawData);
@@ -66,7 +76,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
             if (averageRating != null)
             {
-                platformData.AverageRating = new Rating(averageRating.Identifier, averageRating.Value, platform.RatingInfo.MinRating,
+                platformData.AverageRating = new Rating(averageRating.Identifier, averageRating.Value,
+                    platform.RatingInfo.MinRating,
                     platform.RatingInfo.MaxRating, platform.RatingInfo.SuccessLimit);
             }
             else
@@ -76,12 +87,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
             var transformedRatings = ratings.Select(r =>
                 new KeyValuePair<Guid, Rating>(r.Identifier,
-                    new Rating(r.Identifier, r.Value, platform.RatingInfo.MinRating, platform.RatingInfo.MaxRating, platform.RatingInfo.SuccessLimit)));
+                    new Rating(r.Identifier, r.Value, platform.RatingInfo.MinRating, platform.RatingInfo.MaxRating,
+                        platform.RatingInfo.SuccessLimit)));
 
             var transformedReviews = reviews.Select(r =>
             {
                 var rating = transformedRatings.SingleOrDefault(kvp => kvp.Key == r.RatingIdentifier).Value;
-                return new ReviewData(r.ReviewIdentifier, r.ReviewText, r.ReviewHeading, r.ReviewerName, r.ReviewerAvatarUri, r.ReviewDate,
+                return new ReviewData(r.ReviewIdentifier, r.ReviewText, r.ReviewHeading, r.ReviewerName,
+                    r.ReviewerAvatarUri, r.ReviewDate,
                     rating?.Identifier);
             });
 

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Common.Extensions;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
@@ -12,7 +14,9 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Rebus.Bus;
+using Rebus.Extensions;
 using Rebus.Handlers;
+using Rebus.Pipeline;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHandlers
 {
@@ -21,52 +25,67 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
         private readonly IPlatformManager _platformManager;
         private readonly IDocumentStore _documentStore;
         private readonly IBus _bus;
+        private readonly IMessageContext _messageContext;
         private readonly ILogger<PlatformDataFetcherTriggerHandler> _logger;
 
         public PlatformDataFetcherTriggerHandler(IPlatformManager platformManager, IDocumentStore documentStore,
-            IBus bus, ILogger<PlatformDataFetcherTriggerHandler> logger)
+            IBus bus, IMessageContext messageContext, ILogger<PlatformDataFetcherTriggerHandler> logger)
         {
             _platformManager = platformManager;
             _documentStore = documentStore;
             _bus = bus;
+            _messageContext = messageContext;
             _logger = logger;
         }
 
         public async Task Handle(PlatformDataFetcherTriggerMessage message)
         {
-            _logger.LogInformation("Timer triggered Data Fetch Scheduler triggered");
+            using var loggerScope = _logger.BeginNamedScopeWithMessage(nameof(DataFetchCompleteHandler),
+                _messageContext.Message.GetMessageId());
 
-            using (var session = _documentStore.OpenAsyncSession())
+            _logger.LogInformation("Will check if any platform connection is up for data fetching.");
+
+            var cancellationToken = _messageContext.GetCancellationToken();
+
+            using var session = _documentStore.OpenAsyncSession();
+            var platformConnectionsToFetchDataForPerUser =
+                await GetPlatformConnectionsReadyForDataFetch(session, cancellationToken);
+            var platforms = await _platformManager.GetPlatforms(
+                platformConnectionsToFetchDataForPerUser.SelectMany(kvp => kvp.Value).Select(pc => pc.PlatformId).Distinct()
+                    .ToList(), session);
+
+            _logger.LogInformation(
+                "Found {NoOfUsers} users that have at least one platform connection to trigger data fetch for.", platformConnectionsToFetchDataForPerUser.Count);
+
+            foreach (var kvp in platformConnectionsToFetchDataForPerUser)
             {
-                var platformConnectionsToFetchDataFor = await GetPlatformConnectionsReadyForDataFetch(session);
-                var platforms = await _platformManager.GetPlatforms(
-                    platformConnectionsToFetchDataFor.SelectMany(kvp => kvp.Value).Select(pc => pc.PlatformId).Distinct()
-                        .ToList(), session);
+                var userId = kvp.Key;
+                using var innerLoggingScope1 = _logger.BeginPropertyScope((LoggerPropertyNames.UserId, userId));
 
-                _logger.LogInformation($"Found {platformConnectionsToFetchDataFor.Count} platform connection to trigger data fetch for.");
+                _logger.LogInformation("Will trigger data fetches for {NoOfPlatformConnections} distinct platforms for user.", kvp.Value.Count());
 
-                foreach (var kvp in platformConnectionsToFetchDataFor)
+                foreach (var platformConnection in kvp.Value)
                 {
-                    var userId = kvp.Key;
+                    using var innerLoggingScope2 = _logger.BeginPropertyScope(
+                        (LoggerPropertyNames.PlatformId, platformConnection.PlatformId),
+                        (LoggerPropertyNames.PlatformName, platformConnection.PlatformName));
 
-                    foreach (var platformConnection in kvp.Value)
-                    {
-                        _logger.LogInformation(
-                            $"Will trigger data fetch for platform connection. User: {userId}, PlatformId: {platformConnection.PlatformId}, LastSuccessfulDataFetch: {platformConnection.LastSuccessfulDataFetch}");
+                    _logger.LogInformation(
+                        "Will trigger data fetch for platform. LastSuccessfulDataFetch: {LastSuccessfulDataFetch}", platformConnection.LastSuccessfulDataFetch);
 
-                        platformConnection.MarkAsDataFetchStarted();
-                        var platform = platforms[platformConnection.PlatformId];
-                        var fetchDataMessage = new FetchDataForPlatformConnectionMessage(userId,
-                            platformConnection.PlatformId, platform.IntegrationType, platformConnection.ConnectionInfo);
-                        await _bus.SendLocal(fetchDataMessage);
-                    }
+                    platformConnection.MarkAsDataFetchStarted();
+                    var platform = platforms[platformConnection.PlatformId];
+                    var fetchDataMessage = new FetchDataForPlatformConnectionMessage(userId,
+                        platformConnection.PlatformId, platform.IntegrationType);
+                    await _bus.SendLocal(fetchDataMessage);
                 }
-
-                await session.SaveChangesAsync();
             }
+
+            await session.SaveChangesAsync(cancellationToken);
         }
 
-        private async Task<IList<KeyValuePair<string, IEnumerable<PlatformConnection>>>> GetPlatformConnectionsReadyForDataFetch(IAsyncDocumentSession session)
+        private static async Task<IList<KeyValuePair<string, IEnumerable<PlatformConnection>>>>
+            GetPlatformConnectionsReadyForDataFetch(IAsyncDocumentSession session, CancellationToken cancellationToken)
         {
             var now = DateTimeOffset.UtcNow;
 
@@ -74,7 +93,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
                 .Query<Users_ByPlatformConnectionPossiblyRipeForDataFetch.Result,
                     Users_ByPlatformConnectionPossiblyRipeForDataFetch>()
                 .OrderBy(u => u.MinimumDataPullIntervalInSeconds).Take(1)
-                .Select(u => u.MinimumDataPullIntervalInSeconds).FirstOrDefaultAsync();
+                .Select(u => u.MinimumDataPullIntervalInSeconds).FirstOrDefaultAsync(cancellationToken);
 
             if (!smallestExistingDataPullInterval.HasValue)
             {
@@ -83,13 +102,17 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             var cutoff = now - TimeSpan.FromSeconds(smallestExistingDataPullInterval.Value);
 
-            var userIdsThatPossibleHavePlatformConnectionsRipeForDataFetch = await session.Query<Users_ByPlatformConnectionPossiblyRipeForDataFetch.Result, Users_ByPlatformConnectionPossiblyRipeForDataFetch>()
-                .Where(u => u.EarliestPlatformConnectionDataFetchCompletion == DateTimeOffset.MinValue || u.EarliestPlatformConnectionDataFetchCompletion.Value < cutoff)
+            var userIdsThatPossibleHavePlatformConnectionsRipeForDataFetch = await session
+                .Query<Users_ByPlatformConnectionPossiblyRipeForDataFetch.Result,
+                    Users_ByPlatformConnectionPossiblyRipeForDataFetch>()
+                .Where(u => u.EarliestPlatformConnectionDataFetchCompletion == DateTimeOffset.MinValue ||
+                            u.EarliestPlatformConnectionDataFetchCompletion.Value < cutoff)
                 .Select(u => u.UserId)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             var usersThatPossibleHavePlatformConnectionsRipeForDataFetch =
-                await session.LoadAsync<User>(userIdsThatPossibleHavePlatformConnectionsRipeForDataFetch);
+                await session.LoadAsync<User>(userIdsThatPossibleHavePlatformConnectionsRipeForDataFetch,
+                    cancellationToken);
 
             var userIdsToPlatformConnectionsThatShouldBeUpdated =
                 usersThatPossibleHavePlatformConnectionsRipeForDataFetch.Values
@@ -103,7 +126,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
         private static bool IsPlatformConnectionRipeForUpdate(PlatformConnection pc, DateTimeOffset now)
         {
-            return pc.DataPullIntervalInSeconds.HasValue &&
+            return !pc.ConnectionInfo.IsDeleted && 
+                   pc.DataPullIntervalInSeconds.HasValue &&
                    (!pc.LastDataFetchAttemptStart.HasValue ||
                    (pc.LastDataFetchAttemptCompleted.HasValue &&                            //we did complete the last update attempt and it was more then data pull interval ago 
                     now.Subtract(pc.LastDataFetchAttemptCompleted.Value).TotalSeconds >=

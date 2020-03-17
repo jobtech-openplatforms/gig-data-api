@@ -32,39 +32,37 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
         public async Task Handle(PlatformConnectionRemovedMessage message)
         {
-            using (var session = _documentStore.OpenAsyncSession())
+            using var session = _documentStore.OpenAsyncSession();
+            //remove connection
+            var user = await session.LoadAsync<User>(message.UserId);
+            var index = 0;
+            var indexToRemove = -1;
+            PlatformConnection platformConnectionToRemove = null;
+
+            foreach (var userPlatformConnection in user.PlatformConnections)
             {
-                //remove connection
-                var user = await session.LoadAsync<User>(message.UserId);
-                var index = 0;
-                var indexToRemove = -1;
-                PlatformConnection platformConnectionToRemove = null;
-
-                foreach (var userPlatformConnection in user.PlatformConnections)
+                if (userPlatformConnection.PlatformId == message.PlatformId)
                 {
-                    if (userPlatformConnection.PlatformId == message.PlatformId)
-                    {
-                        indexToRemove = index;
-                        platformConnectionToRemove = userPlatformConnection;
-                    }
-
-                    index++;
+                    indexToRemove = index;
+                    platformConnectionToRemove = userPlatformConnection;
+                    break;
                 }
 
-                if (indexToRemove == -1 || platformConnectionToRemove == null)
-                {
-                    _logger.LogWarning($"Platform connection with platform id {message.PlatformId} was not found for user with id {message.UserId}");
-                    return;
-                }
-
-                user.PlatformConnections.RemoveAt(indexToRemove);
-                await session.SaveChangesAsync();
-
-                await _appNotificationManager.NotifyPlatformConnectionRemoved(message.UserId,
-                    platformConnectionToRemove.ConnectionInfo.NotificationInfos.Select(ni => ni.AppId).ToList(),
-                    platformConnectionToRemove.PlatformId, platformConnectionToRemove.ExternalPlatformId, platformConnectionToRemove.PlatformName, session);
+                index++;
             }
-            
+
+            if (indexToRemove == -1 || platformConnectionToRemove == null)
+            {
+                _logger.LogWarning($"Platform connection with platform id {message.PlatformId} was not found for user with id {message.UserId}");
+                return;
+            }
+
+            user.PlatformConnections.RemoveAt(indexToRemove);
+            await session.SaveChangesAsync();
+
+            await _appNotificationManager.NotifyPlatformConnectionRemoved(message.UserId,
+                platformConnectionToRemove.ConnectionInfo.NotificationInfos.Select(ni => ni.AppId).ToList(),
+                platformConnectionToRemove.PlatformId, platformConnectionToRemove.ExternalPlatformId, platformConnectionToRemove.PlatformName, session);
         }
 
         public async Task Handle(IFailed<PlatformConnectionRemovedMessage> message)

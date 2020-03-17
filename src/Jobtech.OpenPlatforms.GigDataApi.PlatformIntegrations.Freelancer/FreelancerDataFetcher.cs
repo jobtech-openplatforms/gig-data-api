@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
@@ -30,7 +31,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
             _logger = logger;
         }
 
-        public new async Task<OAuthPlatformConnectionInfo> StartDataFetch(string userId, string platformId, OAuthPlatformConnectionInfo connectionInfo, PlatformConnection platformConnection)
+        public new async Task<OAuthPlatformConnectionInfo> StartDataFetch(string userId, string platformId,
+            OAuthPlatformConnectionInfo connectionInfo, PlatformConnection platformConnection,
+            CancellationToken cancellationToken = default)
         {
             _logger.LogTrace($"Will start data fetch from Freelancer for user with id {userId}");
             if (connectionInfo.Token.HasExpired())
@@ -49,7 +52,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
                 }
                 catch (UnauthorizedAccessException)
                 {
-                    _logger.LogInformation("The consent to access Freelancer seems tot have been revoked. Will act accordingly");
+                    _logger.LogInformation(
+                        "The consent to access Freelancer seems tot have been revoked. Will act accordingly");
                     return await HandleUnauthorized(userId, platformId);
                 }
 
@@ -69,7 +73,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
             }
             catch (UnauthorizedAccessException)
             {
-                _logger.LogInformation("The consent to access Freelancer seems tot have been revoked. Will act accordingly");
+                _logger.LogInformation(
+                    "The consent to access Freelancer seems tot have been revoked. Will act accordingly");
                 return await HandleUnauthorized(userId, platformId);
             }
 
@@ -78,7 +83,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
             var raw = $"{{data: [{rawUserProfile}, {rawReviews}]}}";
 
             var numberOfCompletedJobs = userProfile.Result.Reputation.EntireHistory.Complete;
-            var averageRating = numberOfCompletedJobs == 0 ? null : new RatingDataFetchResult(userProfile.Result.Reputation.EntireHistory.Overall);
+            var averageRating = numberOfCompletedJobs == 0
+                ? null
+                : new RatingDataFetchResult(userProfile.Result.Reputation.EntireHistory.Overall);
 
             //achievements
             var achievements = new List<AchievementFetchResult>();
@@ -91,7 +98,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
                     var score = new AchievementScoreFetchResult(
                         qualification.ScorePercentage.ToString(CultureInfo.InvariantCulture), "percent");
 
-                    var achievement = new AchievementFetchResult($"freelancer_qualification_{qualification.Id}", qualification.Name,
+                    var achievement = new AchievementFetchResult($"freelancer_qualification_{qualification.Id}",
+                        qualification.Name,
                         "qualification", PlatformAchievementType.QualificationAssessment, qualification.Description,
                         $"https://www.freelancer.com{qualification.IconUrl}",
                         score);
@@ -106,7 +114,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
                 foreach (var badge in badges)
                 {
                     var achievement = new AchievementFetchResult($"freelancer_badge_{badge.Id}", badge.Name, "badge",
-                        PlatformAchievementType.Badge, badge.Description, $"https://www.freelancer.com{badge.IconUrl}", null);
+                        PlatformAchievementType.Badge, badge.Description, $"https://www.freelancer.com{badge.IconUrl}",
+                        null);
 
                     achievements.Add(achievement);
                 }
@@ -116,7 +125,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
 
             var result = new PlatformDataFetchResult(numberOfCompletedJobs,
                 registrationDate, DateTimeOffset.UtcNow, averageRating, ratings, reviews, achievements, raw);
-            await CompleteDataFetch(userId, platformId ,result);
+            await CompleteDataFetch(userId, platformId, result);
 
 
             _logger.LogTrace($"Freelancer data fetch completed for user with id {userId}");

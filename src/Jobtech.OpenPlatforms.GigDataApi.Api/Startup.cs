@@ -118,7 +118,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
             DocumentStoreHolder.CertPwd = certPwd;
             DocumentStoreHolder.CertPath = certPath;
             DocumentStoreHolder.KeyPath = keyPath;
-            DocumentStoreHolder.IsDevelopment = false; //HostingEnvironment.IsDevelopment();
             services.AddSingleton<IDocumentStore>(DocumentStoreHolder.Store);
 
             //Setup options for the app
