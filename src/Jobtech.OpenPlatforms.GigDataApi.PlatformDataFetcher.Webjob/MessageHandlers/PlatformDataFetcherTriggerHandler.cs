@@ -7,6 +7,7 @@ using Jobtech.OpenPlatforms.GigDataApi.Common.Extensions;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
+using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Extensions;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Indexes;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Messages;
 using Microsoft.Extensions.Logging;
@@ -27,6 +28,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
         private readonly IBus _bus;
         private readonly IMessageContext _messageContext;
         private readonly ILogger<PlatformDataFetcherTriggerHandler> _logger;
+
+        private const int ScheduleIntervalInSeconds = 60;
 
         public PlatformDataFetcherTriggerHandler(IPlatformManager platformManager, IDocumentStore documentStore,
             IBus bus, IMessageContext messageContext, ILogger<PlatformDataFetcherTriggerHandler> logger)
@@ -82,6 +85,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
             }
 
             await session.SaveChangesAsync(cancellationToken);
+
+            await _bus.DeferMessageLocal(ScheduleIntervalInSeconds, logger: _logger);
         }
 
         private static async Task<IList<KeyValuePair<string, IEnumerable<PlatformConnection>>>>

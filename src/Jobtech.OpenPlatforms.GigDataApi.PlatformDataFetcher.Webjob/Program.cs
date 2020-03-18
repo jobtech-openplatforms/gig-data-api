@@ -55,10 +55,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                     reloadOnChange: false); //load local settings
 
                 configApp.AddEnvironmentVariables();
-            }).ConfigureWebJobs(configWebjob =>
-            {
-                configWebjob.AddAzureStorageCoreServices();
-                configWebjob.AddTimers();
             }).ConfigureLogging((hostContext, configLogging) =>
             {
                 var formatElastic = hostContext.Configuration.GetValue("FormatLogsInElasticFormat", false);
