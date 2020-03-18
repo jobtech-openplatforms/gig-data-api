@@ -3,30 +3,24 @@ using System.Collections.Generic;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Common.Messages
 {
-    public class PlatformConnectionUpdateNotificationMessage: AppNotificationMessageBase
+    public class PlatformConnectionUpdateNotificationMessage
     {
-        private PlatformConnectionUpdateNotificationMessage(): base() { }
+        private PlatformConnectionUpdateNotificationMessage() { }
 
-        public PlatformConnectionUpdateNotificationMessage(string notificationEndpoint, string sharedSecret, string platformId, Guid externalPlatformId, 
-            string platformName, PlatformConnectionState platformConnectionState, Guid userId, DateTimeOffset updated,
-            PlatformData platformData = null, NotificationReason reason = NotificationReason.DataUpdate): base(notificationEndpoint, sharedSecret)
+        public PlatformConnectionUpdateNotificationMessage(string platformId, string userId, string appId,
+            PlatformConnectionState platformConnectionState,
+            NotificationReason reason = NotificationReason.DataUpdate)
         {
             PlatformId = platformId;
-            ExternalPlatformId = externalPlatformId;
-            PlatformName = platformName;
-            PlatformConnectionState = platformConnectionState;
             UserId = userId;
-            Updated = updated;
-            PlatformData = platformData;
+            AppId = appId;
+            Reason = reason;
         }
 
         public string PlatformId { get; private set; }
-        public Guid ExternalPlatformId { get; private set; }
-        public string PlatformName { get; private set; }
+        public string UserId { get; private set; }
+        public string AppId { get; private set; }
         public PlatformConnectionState PlatformConnectionState { get; private set; }
-        public Guid UserId { get; private set; }
-        public DateTimeOffset Updated { get; private set; }
-        public PlatformData PlatformData { get; private set; }
         public NotificationReason Reason { get; private set; }
     }
 

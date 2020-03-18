@@ -60,7 +60,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             await _appNotificationManager.NotifyPlatformConnectionRemoved(message.UserId,
                 platformConnectionToRemove.ConnectionInfo.NotificationInfos.Select(ni => ni.AppId).ToList(),
-                platformConnectionToRemove.PlatformId, platformConnectionToRemove.ExternalPlatformId, platformConnectionToRemove.PlatformName, session);
+                platformConnectionToRemove.PlatformId, session);
         }
 
         public async Task Handle(IFailed<PlatformConnectionRemovedMessage> message)

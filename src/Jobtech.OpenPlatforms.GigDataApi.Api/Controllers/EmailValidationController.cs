@@ -87,7 +87,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
                     //notify
                     await _appNotificationManager.NotifyEmailValidationDone(user.Id, appIdsToNotify,
-                        userEmail.Email, prompt.Result.Value, session, cancellationToken);
+                        userEmail.Email, session, cancellationToken);
                 }
             }
 

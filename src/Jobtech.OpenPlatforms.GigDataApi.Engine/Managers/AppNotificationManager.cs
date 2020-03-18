@@ -1,34 +1,29 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Raven.Client.Documents.Session;
 using Rebus.Bus;
-using PlatformData = Jobtech.OpenPlatforms.GigDataApi.Core.Entities.PlatformData;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {
     public interface IAppNotificationManager
     {
-        Task NotifyEmailValidationDone(string userId, IList<string> appIds, string email, bool wasVerified,
+        Task NotifyEmailValidationDone(string userId, IList<string> appIds, string email,
             IAsyncDocumentSession session, CancellationToken cancellationToken = default);
 
         Task NotifyPlatformConnectionAwaitingOAuthAuthentication(string userId, IList<string> appIds, string platformId,
-            Guid externalPlatformId, string platformName,
             IAsyncDocumentSession session, CancellationToken cancellationToken = default);
 
         Task NotifyPlatformConnectionAwaitingEmailVerification(string userId, IList<string> appIds, string platformId,
-            Guid externalPlatformId, string platformName,
             IAsyncDocumentSession session, CancellationToken cancellationToken = default);
 
         Task NotifyPlatformConnectionDataUpdate(string userId, IList<string> appIds,
-            string platformId, Guid externalPlatformId, string platformName, string platformDataId,
-            IAsyncDocumentSession session, CancellationToken cancellationToken = default);
+            string platformId, IAsyncDocumentSession session, CancellationToken cancellationToken = default);
 
         Task NotifyPlatformConnectionRemoved(string userId, IList<string> appIds, string platformId,
-            Guid externalPlatformId, string platformName,
             IAsyncDocumentSession session, CancellationToken cancellationToken = default);
     }
 
@@ -42,142 +37,56 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             _bus = bus;
         }
 
-        public async Task NotifyEmailValidationDone(string userId, IList<string> appIds, string email, bool wasVerified,
+        public async Task NotifyEmailValidationDone(string userId, IList<string> appIds, string email,
             IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
             var user = await session.LoadAsync<User>(userId, cancellationToken);
             var apps = await session.LoadAsync<App>(appIds, cancellationToken);
 
-            foreach (var app in apps.Values)
+            foreach (var message in apps.Values.Select(app =>
+                new Common.Messages.EmailVerificationNotificationMessage(email, user.Id, app.Id)))
             {
-                var emailVerificationNotificationEndpoint = app.EmailVerificationNotificationEndpoint;
-                var message = new Common.Messages.EmailVerificationNotificationMessage(emailVerificationNotificationEndpoint,
-                    app.SecretKey, email,
-                    user.ExternalId, wasVerified);
                 await _bus.Send(message);
             }
         }
 
         public async Task NotifyPlatformConnectionAwaitingOAuthAuthentication(string userId, IList<string> appIds,
-            string platformId, Guid externalPlatformId, string platformName,
-            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
+            string platformId, IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
-            await NotifyPlatformDataUpdate(userId, appIds, platformId, externalPlatformId, platformName, session, null,
+            await NotifyPlatformDataUpdate(userId, appIds, platformId, session,
                 PlatformConnectionState.AwaitingOAuthAuthentication, cancellationToken);
         }
 
         public async Task NotifyPlatformConnectionAwaitingEmailVerification(string userId, IList<string> appIds,
-            string platformId, Guid externalPlatformId, string platformName,
-            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
+            string platformId, IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
-            await NotifyPlatformDataUpdate(userId, appIds, platformId, externalPlatformId, platformName, session, null,
+            await NotifyPlatformDataUpdate(userId, appIds, platformId, session,
                 PlatformConnectionState.AwaitingEmailVerification, cancellationToken);
         }
 
         public async Task NotifyPlatformConnectionDataUpdate(string userId, IList<string> appIds,
-            string platformId, Guid externalPlatformId, string platformName, string platformDataId,
-            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
+            string platformId, IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
-            await NotifyPlatformDataUpdate(userId, appIds, platformId, externalPlatformId, platformName, session,
-                platformDataId, PlatformConnectionState.Connected, cancellationToken);
+            await NotifyPlatformDataUpdate(userId, appIds, platformId, session, PlatformConnectionState.Connected,
+                cancellationToken);
         }
 
         public async Task NotifyPlatformConnectionRemoved(string userId, IList<string> appIds, string platformId,
-            Guid externalPlatformId, string platformName,
             IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
-            await NotifyPlatformDataUpdate(userId, appIds, platformId, externalPlatformId, platformName, session, null,
-                PlatformConnectionState.Removed, cancellationToken);
+            await NotifyPlatformDataUpdate(userId, appIds, platformId, session, PlatformConnectionState.Removed,
+                cancellationToken);
         }
 
         private async Task NotifyPlatformDataUpdate(string userId, IList<string> appIds, string platformId,
-            Guid externalPlatformId, string platformName, IAsyncDocumentSession session,
-            string platformDataId = null, PlatformConnectionState connectionState = PlatformConnectionState.Connected,
+            IAsyncDocumentSession session, PlatformConnectionState connectionState = PlatformConnectionState.Connected,
             CancellationToken cancellationToken = default)
         {
-            var user = await session.LoadAsync<User>(userId, cancellationToken);
             var apps = await session.LoadAsync<App>(appIds, cancellationToken);
 
-            PlatformData data = null;
-            if (platformDataId != null)
+            foreach (var message in apps.Values.Select(app => new Common.Messages.PlatformConnectionUpdateNotificationMessage(platformId, userId,
+                app.Id, connectionState)))
             {
-                data = await session.LoadAsync<PlatformData>(platformDataId, cancellationToken);
-            }
-
-            if (connectionState == PlatformConnectionState.Connected && platformDataId != null)
-            {
-                connectionState = PlatformConnectionState.Synced;
-            }
-
-
-            foreach (var app in apps.Values)
-            {
-                Common.Messages.PlatformData messagePlatformData = null;
-                if (data != null)
-                {
-                    var messageReviews = new List<Common.Messages.PlatformReview>();
-                    if (data.Reviews != null)
-                    {
-                        foreach (var review in data.Reviews)
-                        {
-                            var messageReview = new Common.Messages.PlatformReview(review.ReviewIdentifier,
-                                review.ReviewText,
-                                review.ReviewerName, review.ReviewHeading, review.ReviewerAvatarUri, review.RatingId,
-                                review.ReviewDate);
-                            messageReviews.Add(messageReview);
-                        }
-                    }
-
-                    var messageRatings = new List<Common.Messages.PlatformRating>();
-                    if (data.Ratings != null)
-                    {
-                        foreach (var rating in data.Ratings)
-                        {
-                            var messageRating = new Common.Messages.PlatformRating(rating.Value, rating.Min, rating.Max,
-                                rating.SuccessLimit, rating.Identifier);
-                            messageRatings.Add(messageRating);
-                        }
-                    }
-
-                    var messageAchievements = new List<Common.Messages.PlatformAchievement>();
-                    if (data.Achievements != null)
-                    {
-                        foreach (var achievement in data.Achievements)
-                        {
-                            Common.Messages.PlatformAchievementScore score = null;
-                            if (achievement.Score != null)
-                            {
-                                score = new Common.Messages.PlatformAchievementScore(achievement.Score.Value, achievement.Score.Label);
-                            }
-
-                            var messageAchievement = new Common.Messages.PlatformAchievement(
-                                achievement.AchievementIdentifier, achievement.Name,
-                                achievement.AchievementPlatformType, achievement.AchievementType,
-                                achievement.Description, achievement.ImageUri, score);
-
-                            messageAchievements.Add(messageAchievement);
-                        }
-                    }
-
-
-                    Common.Messages.PlatformRating messageAverageRating = null;
-                    if (data.AverageRating != null)
-                    {
-                        messageAverageRating = new Common.Messages.PlatformRating(data.AverageRating.Value,
-                            data.AverageRating.Min, data.AverageRating.Max, data.AverageRating.SuccessLimit,
-                            data.AverageRating.Identifier);
-                    }
-
-                    messagePlatformData = new Common.Messages.PlatformData(data.NumberOfGigs, messageAverageRating,
-                        data.PeriodStart, data.PeriodEnd, messageRatings, messageReviews, messageAchievements);
-
-                }
-
-
-                var message = new Common.Messages.PlatformConnectionUpdateNotificationMessage(app.NotificationEndpoint, app.SecretKey,
-                    platformId, externalPlatformId, platformName, connectionState, user.ExternalId,
-                    DateTimeOffset.UtcNow, messagePlatformData);
-
                 await _bus.Send(message);
             }
         }

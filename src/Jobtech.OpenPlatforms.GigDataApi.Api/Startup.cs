@@ -67,8 +67,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
                         t.UseAzureServiceBusAsOneWayClient(
                             serviceBusConnectionString))
                     .Routing(r => r.TypeBased()
-                        .Map<EmailVerificationNotificationMessage>("emailverification.update")
-                        .Map<PlatformConnectionUpdateNotificationMessage>("platformconnection.update")
+                        .Map<EmailVerificationNotificationMessage>("platformdatafetcher.input")
+                        .Map<PlatformConnectionUpdateNotificationMessage>("platformdatafetcher.input")
                     ));
 
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();

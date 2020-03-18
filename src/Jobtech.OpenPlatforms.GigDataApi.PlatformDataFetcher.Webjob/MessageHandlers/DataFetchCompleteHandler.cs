@@ -64,7 +64,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             await _appNotificationManager.NotifyPlatformConnectionDataUpdate(message.UserId,
                 platformConnection.ConnectionInfo.NotificationInfos.Select(ni => ni.AppId).ToList(),
-                platformConnection.PlatformId, platformConnection.ExternalPlatformId, platformConnection.PlatformName, platformDataId, session, cancellationToken);
+                platformConnection.PlatformId, session, cancellationToken);
 
             _logger.LogInformation("Applications have been notified.");
         }

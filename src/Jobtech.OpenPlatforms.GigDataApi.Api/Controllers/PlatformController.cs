@@ -276,7 +276,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                         .ConnectionInfo.NotificationInfos.Select(ni => ni.AppId).ToList();
                     user.PlatformConnections.Remove(platformConnection);
                     await _appNotificationManager.NotifyPlatformConnectionRemoved(user.Id, removedAppIds, platform.Id,
-                        platform.ExternalId, platform.Name, session, cancellationToken);
+                        session, cancellationToken);
                 }
                 else
                 {
@@ -332,7 +332,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                     if (removedAppIds.Count > 0)
                     {
                         await _appNotificationManager.NotifyPlatformConnectionRemoved(user.Id, removedAppIds,
-                            platform.Id, platform.ExternalId, platform.Name, session, cancellationToken);
+                            platform.Id, session, cancellationToken);
                     }
 
                 }

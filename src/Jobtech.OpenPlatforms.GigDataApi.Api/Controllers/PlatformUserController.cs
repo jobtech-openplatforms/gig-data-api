@@ -91,11 +91,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                     $"App with application id {app.ApplicationId} is not registered for receiving notifications for platform with id {platform.Id} for user with id {existingUser.ExternalId}");
             }
 
-            var platformData =
-                await _platformDataManager.GetPlatformData(existingUser.Id, platform.Id, session, cancellationToken);
-
             await _appNotificationManager.NotifyPlatformConnectionDataUpdate(existingUser.Id,
-                new List<string> {app.Id}, platform.Id, platform.ExternalId, platform.Name, platformData?.Id, session,
+                new List<string> {app.Id}, platform.Id, session,
                 cancellationToken);
 
             return new AcceptedResult();

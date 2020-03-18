@@ -2,23 +2,20 @@
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Common.Messages
 {
-    public class EmailVerificationNotificationMessage: AppNotificationMessageBase
+    public class EmailVerificationNotificationMessage
     {
-        private EmailVerificationNotificationMessage(): base()
-        {
+        public EmailVerificationNotificationMessage() { }
 
-        }
-
-        public EmailVerificationNotificationMessage(string notificationEndpoint, string sharedSecret, string email, Guid userId,
-            bool wasVerified): base(notificationEndpoint, sharedSecret)
+        public EmailVerificationNotificationMessage(string email, string userId,
+            string appId)
         {
             Email = email;
             UserId = userId;
-            WasVerified = wasVerified;
+            AppId = appId;
         }
 
         public string Email { get; private set; }
-        public Guid UserId { get; private set; }
-        public bool WasVerified { get; private set; }
+        public string UserId { get; private set; }
+        public string AppId { get; private set; }
     }
 }

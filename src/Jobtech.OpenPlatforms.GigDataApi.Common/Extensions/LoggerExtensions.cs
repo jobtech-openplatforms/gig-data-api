@@ -39,6 +39,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Common.Extensions
         public const string PlatformIntegrationType = "PlatformIntegrationType";
         public const string UserId = "UserId";
         public const string GigPlatformApiRequestId = "GigPlatformApiRequestId";
+        public const string NotificationEndpoint = "NotificationEndpoint";
+        public const string NotificationEndpointSharedSecret = "NotificationEndpointSharedSecret";
+        public const string ApplicationId = "ApplicationId";
 
     }
 }
