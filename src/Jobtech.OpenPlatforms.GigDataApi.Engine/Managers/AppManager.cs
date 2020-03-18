@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
@@ -12,19 +13,29 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
     public interface IAppManager
     {
         Task<App> CreateApp(string name, string notificationEndpoint,
-            string emailVerificationNotificationEndpoint, string authCallbackUri, IAsyncDocumentSession session);
+            string emailVerificationNotificationEndpoint, string authCallbackUri, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
+
         Task<App> CreateApp(string name, string applicationId, string secretKey, string notificationEndpoint,
-            string emailVerificationNotificationEndpoint, IAsyncDocumentSession session);
-        Task<App> GetAppFromApplicationId(string applicationId, IAsyncDocumentSession session);
+            string emailVerificationNotificationEndpoint, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
+
+        Task<App> GetAppFromApplicationId(string applicationId, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
 
         Task<IList<App>> GetAppsFromApplicationIds(IList<string> applicationIds,
-            IAsyncDocumentSession session);
-        Task<App> GetAppFromSecretKey(string secretKey, IAsyncDocumentSession session);
-        Task<App> GetAppFromId(string id, IAsyncDocumentSession session);
-        Task<IEnumerable<App>> GetAppsFromIds(IList<string> ids, IAsyncDocumentSession session);
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default);
+
+        Task<App> GetAppFromSecretKey(string secretKey, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
+
+        Task<App> GetAppFromId(string id, IAsyncDocumentSession session, CancellationToken cancellationToken = default);
+
+        Task<IEnumerable<App>> GetAppsFromIds(IList<string> ids, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
     }
 
-    public class AppManager: IAppManager
+    public class AppManager : IAppManager
     {
         private readonly Auth0ManagementApiHttpClient _httpClient;
 
@@ -34,18 +45,22 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         }
 
         public async Task<App> CreateApp(string name, string notificationEndpoint,
-            string emailVerificationNotificationEndpoint, string authCallbackUri, IAsyncDocumentSession session)
+            string emailVerificationNotificationEndpoint, string authCallbackUri, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
         {
             var auth0App = await _httpClient.CreateApp(name, authCallbackUri);
             return await CreateApp(name, auth0App.ClientId, Guid.NewGuid().ToString(), notificationEndpoint,
-                emailVerificationNotificationEndpoint, session);
+                emailVerificationNotificationEndpoint, session, cancellationToken);
         }
 
-        public async Task<App> CreateApp(string name, string applicationId, string secretKey, string notificationEndpoint,
-            string emailVerificationNotificationEndpoint, IAsyncDocumentSession session)
+        public async Task<App> CreateApp(string name, string applicationId, string secretKey,
+            string notificationEndpoint,
+            string emailVerificationNotificationEndpoint, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
         {
             var existingAppWithApplicationId =
-                await session.Query<App>().SingleOrDefaultAsync(a => a.ApplicationId == applicationId);
+                await session.Query<App>()
+                    .SingleOrDefaultAsync(a => a.ApplicationId == applicationId, cancellationToken);
 
             if (existingAppWithApplicationId != null)
             {
@@ -54,13 +69,15 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
             var app = new App(name, secretKey, applicationId, notificationEndpoint,
                 emailVerificationNotificationEndpoint);
-            await session.StoreAsync(app);
+            await session.StoreAsync(app, cancellationToken);
             return app;
         }
 
-        public async Task<App> GetAppFromApplicationId(string applicationId, IAsyncDocumentSession session)
+        public async Task<App> GetAppFromApplicationId(string applicationId, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
         {
-            var app = await session.Query<App>().SingleOrDefaultAsync(a => a.ApplicationId == applicationId);
+            var app = await session.Query<App>()
+                .SingleOrDefaultAsync(a => a.ApplicationId == applicationId, cancellationToken);
 
             if (app == null)
             {
@@ -71,15 +88,17 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         }
 
         public async Task<IList<App>> GetAppsFromApplicationIds(IList<string> applicationIds,
-            IAsyncDocumentSession session)
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
-            var apps = await session.Query<App>().Where(a => a.ApplicationId.In(applicationIds)).ToListAsync();
+            var apps = await session.Query<App>().Where(a => a.ApplicationId.In(applicationIds))
+                .ToListAsync(cancellationToken);
             return apps;
         }
 
-        public async Task<App> GetAppFromSecretKey(string secretKey, IAsyncDocumentSession session)
+        public async Task<App> GetAppFromSecretKey(string secretKey, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
         {
-            var app = await session.Query<App>().SingleOrDefaultAsync(a => a.SecretKey == secretKey);
+            var app = await session.Query<App>().SingleOrDefaultAsync(a => a.SecretKey == secretKey, cancellationToken);
 
 
             if (app == null)
@@ -90,14 +109,16 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             return app;
         }
 
-        public async Task<App> GetAppFromId(string id, IAsyncDocumentSession session)
+        public async Task<App> GetAppFromId(string id, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
         {
-            return await session.LoadAsync<App>(id);
+            return await session.LoadAsync<App>(id, cancellationToken);
         }
 
-        public async Task<IEnumerable<App>> GetAppsFromIds(IList<string> ids, IAsyncDocumentSession session)
+        public async Task<IEnumerable<App>> GetAppsFromIds(IList<string> ids, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
         {
-            var apps = await session.LoadAsync<App>(ids);
+            var apps = await session.LoadAsync<App>(ids, cancellationToken);
             return apps.Values;
         }
     }

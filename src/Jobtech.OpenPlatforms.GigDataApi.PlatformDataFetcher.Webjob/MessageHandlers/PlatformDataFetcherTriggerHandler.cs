@@ -52,7 +52,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
                 await GetPlatformConnectionsReadyForDataFetch(session, cancellationToken);
             var platforms = await _platformManager.GetPlatforms(
                 platformConnectionsToFetchDataForPerUser.SelectMany(kvp => kvp.Value).Select(pc => pc.PlatformId).Distinct()
-                    .ToList(), session);
+                    .ToList(), session, cancellationToken);
 
             _logger.LogInformation(
                 "Found {NoOfUsers} users that have at least one platform connection to trigger data fetch for.", platformConnectionsToFetchDataForPerUser.Count);

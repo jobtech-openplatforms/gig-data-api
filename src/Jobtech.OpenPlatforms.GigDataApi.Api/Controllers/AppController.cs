@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +17,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         private readonly IAppManager _appManager;
         private readonly IDocumentStore _documentStore;
         private readonly Options _options;
-        
+
         public AppController(IAppManager appManager, IDocumentStore documentStore, IOptions<Options> options)
         {
             _appManager = appManager;
@@ -25,26 +26,25 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         }
 
         [HttpPost("admin/create")]
-        public async Task<ActionResult<AppCreateResult>> CreateApp([FromHeader(Name = "admin-key")] Guid adminKey, [FromBody] AppCreateModel model)
+        public async Task<ActionResult<AppCreateResult>> CreateApp([FromHeader(Name = "admin-key")] Guid adminKey,
+            [FromBody] AppCreateModel model, CancellationToken cancellationToken)
         {
             if (!_options.AdminKeys.Contains(adminKey))
             {
                 return Unauthorized();
             }
 
-            using (var session = _documentStore.OpenAsyncSession())
+            using var session = _documentStore.OpenAsyncSession();
+            var createdApp = await _appManager.CreateApp(model.Name, model.NotificationEndpointUrl,
+                model.EmailVerificationNotificationEndpointUrl, model.AuthCallbackUrl, session, cancellationToken);
+
+            await session.SaveChangesAsync(cancellationToken);
+
+            return new AppCreateResult
             {
-                var createdApp = await _appManager.CreateApp(model.Name, model.NotificationEndpointUrl,
-                    model.EmailVerificationNotificationEndpointUrl, model.AuthCallbackUrl, session);
-
-                await session.SaveChangesAsync();
-
-                return new AppCreateResult
-                {
-                    SecretKey = createdApp.SecretKey,
-                    ApplicationId = createdApp.ApplicationId
-                };
-            }
+                SecretKey = createdApp.SecretKey,
+                ApplicationId = createdApp.ApplicationId
+            };
         }
     }
 

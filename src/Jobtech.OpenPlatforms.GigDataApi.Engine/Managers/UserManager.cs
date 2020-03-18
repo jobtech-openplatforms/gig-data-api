@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
@@ -17,9 +18,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {
     public interface IUserManager
     {
-        Task<User> GetOrCreateUserIfNotExists(string uniqueIdentifier, IAsyncDocumentSession session);
-        Task<User> GetUserByUniqueIdentifier(string uniqueIdentifier, IAsyncDocumentSession session);
-        Task<User> GetUserByExternalId(Guid externalId, IAsyncDocumentSession session);
+        Task<User> GetOrCreateUserIfNotExists(string uniqueIdentifier, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
+
+        Task<User> GetUserByUniqueIdentifier(string uniqueIdentifier, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
+
+        Task<User> GetUserByExternalId(Guid externalId, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
     }
 
     public class UserManager : IUserManager
@@ -31,24 +37,26 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             _auth0ManagementClient = auth0ManagementClient;
         }
 
-        public async Task<User> GetOrCreateUserIfNotExists(string uniqueIdentifier, IAsyncDocumentSession session)
+        public async Task<User> GetOrCreateUserIfNotExists(string uniqueIdentifier, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
         {
             var userProfile = await _auth0ManagementClient.GetUserProfile(uniqueIdentifier);
 
-            var existingUser = await GetExistingUserByUniqueIdentifier(uniqueIdentifier, session);
+            var existingUser = await GetExistingUserByUniqueIdentifier(uniqueIdentifier, session, cancellationToken);
             if (existingUser != null)
             {
                 return existingUser;
             }
 
             var user = new User(uniqueIdentifier, userProfile.FirstName, userProfile.LastName);
-            await session.StoreAsync(user);
+            await session.StoreAsync(user, cancellationToken);
             return user;
         }
 
-        public async Task<User> GetUserByUniqueIdentifier(string uniqueIdentifier, IAsyncDocumentSession session)
+        public async Task<User> GetUserByUniqueIdentifier(string uniqueIdentifier, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
         {
-            var existingUser = await GetExistingUserByUniqueIdentifier(uniqueIdentifier, session);
+            var existingUser = await GetExistingUserByUniqueIdentifier(uniqueIdentifier, session, cancellationToken);
             if (existingUser == null)
             {
                 throw new UserDoNotExistException($"Could not find user with unique identifier {uniqueIdentifier}");
@@ -57,9 +65,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             return existingUser;
         }
 
-        public async Task<User> GetUserByExternalId(Guid externalId, IAsyncDocumentSession session)
+        public async Task<User> GetUserByExternalId(Guid externalId, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
         {
-            var existingUser = await session.Query<User>().SingleOrDefaultAsync(u => u.ExternalId == externalId);
+            var existingUser = await session.Query<User>()
+                .SingleOrDefaultAsync(u => u.ExternalId == externalId, cancellationToken);
             if (existingUser == null)
             {
                 throw new UserDoNotExistException($"Could not find user with external id {externalId}");
@@ -68,21 +78,24 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             return existingUser;
         }
 
-        private async Task<User> GetExistingUserByUniqueIdentifier(string uniqueIdentifier, IAsyncDocumentSession session)
+        private async Task<User> GetExistingUserByUniqueIdentifier(string uniqueIdentifier,
+            IAsyncDocumentSession session, CancellationToken cancellationToken)
         {
-            return await session.Query<User>().SingleOrDefaultAsync(u => u.UniqueIdentifier == uniqueIdentifier);
+            return await session.Query<User>()
+                .SingleOrDefaultAsync(u => u.UniqueIdentifier == uniqueIdentifier, cancellationToken);
         }
     }
 
     public class Auth0ManagementApiHttpClient
     {
-        private static AccessToken _accessToken = null;
+        private static AccessToken _accessToken;
 
         private readonly string _clientSecret;
         private readonly string _clientId;
         private readonly string _managementApiAudience;
 
-        public Auth0ManagementApiHttpClient(HttpClient client, IOptions<CVDataEngineServiceCollectionExtension.Auth0Configuration> options)
+        public Auth0ManagementApiHttpClient(HttpClient client,
+            IOptions<CVDataEngineServiceCollectionExtension.Auth0Configuration> options)
         {
             Client = client;
             _clientId = options.Value.ManagementClientId;
@@ -92,13 +105,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
         public HttpClient Client { get; }
 
-        public async Task<string> GetAccessToken()
+        public async Task<string> GetAccessToken(CancellationToken cancellationToken = default)
         {
             if (_accessToken == null || _accessToken.HasExpired())
             {
                 var body = new AccessTokenBody(_clientId, _clientSecret, _managementApiAudience);
                 var bodyJson = JsonConvert.SerializeObject(body);
-                var response = await Client.PostAsync("/oauth/token", new StringContent(bodyJson, Encoding.UTF8, "application/json"));
+                var response = await Client.PostAsync("/oauth/token",
+                    new StringContent(bodyJson, Encoding.UTF8, "application/json"), cancellationToken);
                 var responseStr = await response.Content.ReadAsStringAsync();
                 var accessToken = JsonConvert.DeserializeObject<AccessToken>(responseStr);
                 _accessToken = accessToken;
@@ -107,29 +121,30 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             return _accessToken.Token;
         }
 
-        public async Task<Auth0UserProfile> GetUserProfile(string userId)
+        public async Task<Auth0UserProfile> GetUserProfile(string userId, CancellationToken cancellationToken = default)
         {
-            var accessToken = await GetAccessToken();
+            var accessToken = await GetAccessToken(cancellationToken);
             Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
             var userProfileStr = await Client.GetStringAsync($"/api/v2/users/{userId}");
             return JsonConvert.DeserializeObject<Auth0UserProfile>(userProfileStr);
         }
 
-        public async Task<Auth0App> CreateApp(string name, string callbackUri)
+        public async Task<Auth0App> CreateApp(string name, string callbackUri,
+            CancellationToken cancellationToken = default)
         {
             var payload = new
             {
-                name = name,
-                callbacks = new List<string> { callbackUri },
+                name,
+                callbacks = new List<string> {callbackUri},
                 app_type = "regular_web"
             };
 
             var jsonPayload = JsonConvert.SerializeObject(payload);
 
-            var accessToken = await GetAccessToken();
+            var accessToken = await GetAccessToken(cancellationToken);
             Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
             var response = await Client.PostAsync("/api/v2/clients",
-                new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
+                new StringContent(jsonPayload, Encoding.UTF8, "application/json"), cancellationToken);
 
             var jsonResponse = await response.Content.ReadAsStringAsync();
             return JsonConvert.DeserializeObject<Auth0App>(jsonResponse);
@@ -142,11 +157,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 _created = DateTimeOffset.UtcNow;
             }
 
-            [JsonProperty("access_token")]
-            public string Token { get; private set; }
+            [JsonProperty("access_token")] public string Token { get; private set; }
 
-            [JsonProperty("expires_in")]
-            public int ExpiresIn { get; private set; }
+            [JsonProperty("expires_in")] public int ExpiresIn { get; private set; }
             private readonly DateTimeOffset _created;
 
             public bool HasExpired()
@@ -167,14 +180,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 Audience = audience;
             }
 
-            [JsonProperty("grant_type")]
-            public string GrantType { get; }
-            [JsonProperty("client_id")]
-            public string ClientId { get; }
-            [JsonProperty("client_secret")]
-            public string ClientSecret { get; }
-            [JsonProperty("audience")]
-            public string Audience { get; }
+            [JsonProperty("grant_type")] public string GrantType { get; }
+            [JsonProperty("client_id")] public string ClientId { get; }
+            [JsonProperty("client_secret")] public string ClientSecret { get; }
+            [JsonProperty("audience")] public string Audience { get; }
         }
     }
 
@@ -183,26 +192,24 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
     public class Auth0UserProfile
     {
         public string Email { get; set; }
-        [JsonProperty("given_name")]
-        public string FirstName { get; set; }
-        [JsonProperty("family_name")]
-        public string LastName { get; set; }
+        [JsonProperty("given_name")] public string FirstName { get; set; }
+        [JsonProperty("family_name")] public string LastName { get; set; }
     }
 
     public class Auth0App
     {
         public string Name { get; set; }
-        [JsonProperty("client_id")]
-        public string ClientId { get; set; }
+        [JsonProperty("client_id")] public string ClientId { get; set; }
     }
 
     public class ApproveApiHttpClient
     {
-        private string _apiKey;
-        private string _confirmEmailCallback;
-        private string _rejectEmailCallback;
+        private readonly string _apiKey;
+        private readonly string _confirmEmailCallback;
+        private readonly string _rejectEmailCallback;
 
-        public ApproveApiHttpClient(HttpClient client, IOptions<CVDataEngineServiceCollectionExtension.ApproveApiConfiguration> approveApiOptions)
+        public ApproveApiHttpClient(HttpClient client,
+            IOptions<CVDataEngineServiceCollectionExtension.ApproveApiConfiguration> approveApiOptions)
         {
             Client = client;
             _apiKey = approveApiOptions.Value.ApiKey;
@@ -212,7 +219,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
         public HttpClient Client { get; }
 
-        public async Task<(string PromptId, int ExpiresIn)> SendEmailValidationPrompt(string mailAddress)
+        public async Task<(string PromptId, int ExpiresIn)> SendEmailValidationPrompt(string mailAddress,
+            CancellationToken cancellationToken = default)
         {
 
             var bodyContent = $"Klicka på 'JA' knappen nedan för att validera att du äger mail-adressen {mailAddress}";
@@ -229,14 +237,15 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             });
 
             var response = await Client.PostAsync("prompt",
-                new StringContent(payloadStr, Encoding.UTF8, "application/json"));
+                new StringContent(payloadStr, Encoding.UTF8, "application/json"), cancellationToken);
 
             var promptStr = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
             {
                 var errorResponse = JsonConvert.DeserializeObject<PromptErrorResponse>(promptStr);
-                throw new ExternalServiceErrorException($"Got non-success response from ApproveApi. Response code: {response.StatusCode}, Error: {errorResponse.Error}");
+                throw new ExternalServiceErrorException(
+                    $"Got non-success response from ApproveApi. Response code: {response.StatusCode}, Error: {errorResponse.Error}");
             }
 
             var prompt = JsonConvert.DeserializeObject<Prompt>(promptStr);
@@ -256,7 +265,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         private void SetAuthHeader()
         {
             var byteArray = Encoding.ASCII.GetBytes($"{_apiKey}:");
-            Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+            Client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
         }
 
         internal class SendPromptPayload
@@ -275,25 +285,18 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
             public string User { get; set; }
             public string Body { get; set; }
-            [JsonProperty("approve_text")]
-            public string ApproveText { get; set; }
-            [JsonProperty("reject_text")]
-            public string RejectText { get; set; }
-            [JsonProperty("approve_redirect_url")]
-            public string ApproveRedirectUrl { get; set; }
-            [JsonProperty("reject_redirect_url")]
-            public string RejectRedirectUrl { get; set; }
-            [JsonProperty("expires_in")]
-            public int? ExpiresIn { get; set; }
+            [JsonProperty("approve_text")] public string ApproveText { get; set; }
+            [JsonProperty("reject_text")] public string RejectText { get; set; }
+            [JsonProperty("approve_redirect_url")] public string ApproveRedirectUrl { get; set; }
+            [JsonProperty("reject_redirect_url")] public string RejectRedirectUrl { get; set; }
+            [JsonProperty("expires_in")] public int? ExpiresIn { get; set; }
         }
 
         internal class Prompt
         {
             public string Id { get; set; }
-            [JsonProperty("sent_at")]
-            public int SentAt { get; set; }
-            [JsonProperty("is_expired")]
-            public bool IsExpired { get; set; }
+            [JsonProperty("sent_at")] public int SentAt { get; set; }
+            [JsonProperty("is_expired")] public bool IsExpired { get; set; }
             public PromptAnswer Answer { get; set; }
         }
 

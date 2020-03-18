@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Exceptions;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Extensions;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
-using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Configuration;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer;

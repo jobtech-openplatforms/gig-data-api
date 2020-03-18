@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Common;
-using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Raven.Client.Documents.Session;
 using Rebus.Bus;
@@ -52,7 +51,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             foreach (var app in apps.Values)
             {
                 var emailVerificationNotificationEndpoint = app.EmailVerificationNotificationEndpoint;
-                var message = new EmailVerificationNotificationMessage(emailVerificationNotificationEndpoint,
+                var message = new Common.Messages.EmailVerificationNotificationMessage(emailVerificationNotificationEndpoint,
                     app.SecretKey, email,
                     user.ExternalId, wasVerified);
                 await _bus.Send(message);
@@ -145,10 +144,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                     {
                         foreach (var achievement in data.Achievements)
                         {
-                            PlatformAchievementScore score = null;
+                            Common.Messages.PlatformAchievementScore score = null;
                             if (achievement.Score != null)
                             {
-                                score = new PlatformAchievementScore(achievement.Score.Value, achievement.Score.Label);
+                                score = new Common.Messages.PlatformAchievementScore(achievement.Score.Value, achievement.Score.Label);
                             }
 
                             var messageAchievement = new Common.Messages.PlatformAchievement(
@@ -175,7 +174,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 }
 
 
-                var message = new PlatformConnectionUpdateNotificationMessage(app.NotificationEndpoint, app.SecretKey,
+                var message = new Common.Messages.PlatformConnectionUpdateNotificationMessage(app.NotificationEndpoint, app.SecretKey,
                     platformId, externalPlatformId, platformName, connectionState, user.ExternalId,
                     DateTimeOffset.UtcNow, messagePlatformData);
 

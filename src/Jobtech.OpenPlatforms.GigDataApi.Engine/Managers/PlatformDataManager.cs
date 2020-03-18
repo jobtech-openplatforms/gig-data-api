@@ -55,7 +55,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             IList<ReviewDataFetchResult> reviews, IList<AchievementFetchResult> achievements, string rawData,
             IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
-            var platform = await _platformManager.GetPlatform(platformId, session);
+            var platform = await _platformManager.GetPlatform(platformId, session, cancellationToken);
 
             var platformData = await GetPlatformData(userId, platformId, session, cancellationToken);
 

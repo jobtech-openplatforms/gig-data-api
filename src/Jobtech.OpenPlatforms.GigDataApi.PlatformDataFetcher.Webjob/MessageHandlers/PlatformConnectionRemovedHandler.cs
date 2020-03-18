@@ -16,14 +16,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
     {
         private readonly IDocumentStore _documentStore;
         private readonly ILogger<PlatformConnectionRemovedHandler> _logger;
-        private readonly IPlatformDataManager _platformDataManager;
         private readonly IAppNotificationManager _appNotificationManager;
         private readonly IBus _bus;
 
-        public PlatformConnectionRemovedHandler(IPlatformDataManager platformDataManager, IAppNotificationManager appNotificationManager, IDocumentStore documentStore, IBus bus, 
+        public PlatformConnectionRemovedHandler(IAppNotificationManager appNotificationManager, IDocumentStore documentStore, IBus bus, 
             ILogger<PlatformConnectionRemovedHandler> logger)
         {
-            _platformDataManager = platformDataManager;
             _appNotificationManager = appNotificationManager;
             _documentStore = documentStore;
             _bus = bus;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core;
@@ -15,20 +16,22 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {
     public interface IPlatformConnectionManager
     {
-        Task<PlatformOAuthConnectionStartResult> StartConnectUserToOauthPlatform(Guid externalPlatformId, User user, App app,
-            string oauthCallbackUrl, IAsyncDocumentSession session);
+        Task<PlatformOAuthConnectionStartResult> StartConnectUserToOauthPlatform(Guid externalPlatformId, User user,
+            App app,
+            string oauthCallbackUrl, IAsyncDocumentSession session, CancellationToken cancellationToken = default);
 
         Task<PlatformConnectionStartResult> ConnectUserToEmailPlatform(Guid externalPlatformId, User user, App app,
-            string userPlatformEmailAddress, IAsyncDocumentSession session, bool emailIsValidated = false);
+            string userPlatformEmailAddress, IAsyncDocumentSession session, bool emailIsValidated = false,
+            CancellationToken cancellationToken = default);
 
         Task<string> CompleteConnectUserToOAuthPlatform(Guid externalPlatformId, string code, string stateStr,
-            IAsyncDocumentSession session);
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default);
 
         IPlatformConnectionInfo GetPlatformConnectionInfo(User user, string platformId);
 
     }
 
-    public class PlatformConnectionManager: IPlatformConnectionManager
+    public class PlatformConnectionManager : IPlatformConnectionManager
     {
         private readonly IFreelancerAuthenticator _freelancerAuthenticator;
         private readonly IPlatformManager _platformManager;
@@ -41,7 +44,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
         public PlatformConnectionManager(IPlatformManager platformManager, IUserManager userManager,
             IFreelancerAuthenticator freelancerAuthenticator, IEmailValidatorManager emailValidatorManager,
-            IAppManager appManager, IPlatformDataManager platformDataManager, IAppNotificationManager appNotificationManager,
+            IAppManager appManager, IPlatformDataManager platformDataManager,
+            IAppNotificationManager appNotificationManager,
             ILogger<PlatformConnectionManager> logger)
         {
             _platformManager = platformManager;
@@ -54,8 +58,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             _logger = logger;
         }
 
-        public async Task<PlatformOAuthConnectionStartResult> StartConnectUserToOauthPlatform(Guid externalPlatformId, User user, App app,
-            string oauthCallbackUrl, IAsyncDocumentSession session)
+        public async Task<PlatformOAuthConnectionStartResult> StartConnectUserToOauthPlatform(Guid externalPlatformId,
+            User user, App app,
+            string oauthCallbackUrl, IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
             var platform = await _platformManager.GetPlatformByExternalId(externalPlatformId, session);
 
@@ -65,7 +70,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                     $"Platform auth mechanism must be {PlatformAuthenticationMechanism.Oauth2}");
             }
 
-            var existingPlatformConnection = user.PlatformConnections.SingleOrDefault(pc => pc.PlatformId == platform.Id);
+            var existingPlatformConnection =
+                user.PlatformConnections.SingleOrDefault(pc => pc.PlatformId == platform.Id);
 
             if (existingPlatformConnection != null)
             {
@@ -75,22 +81,26 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                     existingPlatformConnection.ConnectionInfo.NotificationInfos.Add(new NotificationInfo(app.Id));
                 }
 
-                var platformDataForUser = await _platformDataManager.GetPlatformData(user.Id, platform.Id, session);
+                var platformDataForUser =
+                    await _platformDataManager.GetPlatformData(user.Id, platform.Id, session, cancellationToken);
 
                 await _appNotificationManager.NotifyPlatformConnectionDataUpdate(user.Id, new List<string> {app.Id},
-                    platform.Id, platform.ExternalId, platform.Name, platformDataForUser?.Id, session);
+                    platform.Id, platform.ExternalId, platform.Name, platformDataForUser?.Id, session,
+                    cancellationToken);
 
                 return new PlatformOAuthConnectionStartResult(PlatformConnectionState.Connected);
             }
 
-            await _appNotificationManager.NotifyPlatformConnectionAwaitingOAuthAuthentication(user.Id, new List<string> {app.Id}, platform.Id, platform.ExternalId, platform.Name,
-                session);
+            await _appNotificationManager.NotifyPlatformConnectionAwaitingOAuthAuthentication(user.Id,
+                new List<string> {app.Id}, platform.Id, platform.ExternalId, platform.Name,
+                session, cancellationToken);
 
             switch (platform.IntegrationType)
             {
                 case PlatformIntegrationType.FreelancerIntegration:
                     var oauthAuthenticationUrl =
-                        _freelancerAuthenticator.GetAuthorizationUrl(user.ExternalId, oauthCallbackUrl, app.ApplicationId);
+                        _freelancerAuthenticator.GetAuthorizationUrl(user.ExternalId, oauthCallbackUrl,
+                            app.ApplicationId);
                     return new PlatformOAuthConnectionStartResult(PlatformConnectionState.AwaitingOAuthAuthentication,
                         oauthAuthenticationUrl);
                 case PlatformIntegrationType.AirbnbIntegration:
@@ -107,8 +117,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             }
         }
 
-        public async Task<PlatformConnectionStartResult> ConnectUserToEmailPlatform(Guid externalPlatformId, User user, App app,
-            string userPlatformEmailAddress, IAsyncDocumentSession session, bool emailIsValidated = false)
+        public async Task<PlatformConnectionStartResult> ConnectUserToEmailPlatform(Guid externalPlatformId, User user,
+            App app,
+            string userPlatformEmailAddress, IAsyncDocumentSession session, bool emailIsValidated = false,
+            CancellationToken cancellationToken = default)
         {
             userPlatformEmailAddress = userPlatformEmailAddress.ToLowerInvariant();
 
@@ -116,15 +128,18 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
             if (platform.AuthenticationMechanism != PlatformAuthenticationMechanism.Email)
             {
-                throw new PlatformAuthMechanismMismatchException($"Platform auth mechanism must be {PlatformAuthenticationMechanism.Email}");
+                throw new PlatformAuthMechanismMismatchException(
+                    $"Platform auth mechanism must be {PlatformAuthenticationMechanism.Email}");
             }
 
             if (string.IsNullOrEmpty(userPlatformEmailAddress))
             {
-                throw new ArgumentException($"When connecting platform that has email as authentication mechanism, an email address must be provided");
+                throw new ArgumentException(
+                    $"When connecting platform that has email as authentication mechanism, an email address must be provided");
             }
 
-            var existingPlatformConnection = user.PlatformConnections.SingleOrDefault(pc => pc.PlatformId == platform.Id);
+            var existingPlatformConnection =
+                user.PlatformConnections.SingleOrDefault(pc => pc.PlatformId == platform.Id);
 
             if (existingPlatformConnection != null)
             {
@@ -135,7 +150,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 {
                     //the connection was either not an email connection (could happen if the implementation switched auth type at some point in time) or
                     //the email connected was not the same. In both cases, we should remove the existing connection and create a new one
-                    var connectionIndex = Array.FindIndex(user.PlatformConnections.ToArray(), pc => pc.PlatformId == platform.Id);
+                    var connectionIndex = Array.FindIndex(user.PlatformConnections.ToArray(),
+                        pc => pc.PlatformId == platform.Id);
                     user.PlatformConnections.RemoveAt(connectionIndex);
                 }
                 else
@@ -145,10 +161,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                     {
                         existingPlatformConnection.ConnectionInfo.NotificationInfos.Add(new NotificationInfo(app.Id));
 
-                        var platformDataForUser = await _platformDataManager.GetPlatformData(user.Id, platform.Id, session);
+                        var platformDataForUser =
+                            await _platformDataManager.GetPlatformData(user.Id, platform.Id, session,
+                                cancellationToken);
 
-                        await _appNotificationManager.NotifyPlatformConnectionDataUpdate(user.Id, new List<string> { app.Id },
-                            platform.Id, platform.ExternalId, platform.Name, platformDataForUser?.Id, session);
+                        await _appNotificationManager.NotifyPlatformConnectionDataUpdate(user.Id,
+                            new List<string> {app.Id},
+                            platform.Id, platform.ExternalId, platform.Name, platformDataForUser?.Id, session,
+                            cancellationToken);
                     }
 
                     return new PlatformConnectionStartResult(PlatformConnectionState.Connected);
@@ -165,14 +185,17 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                     //TODO: we need to think about how to resend verification as well
 
                     //user email is unverified, start verification process
-                    await _emailValidatorManager.StartEmailValidation(userPlatformEmailAddress, user, app, session, platform.Id);
+                    await _emailValidatorManager.StartEmailValidation(userPlatformEmailAddress, user, app, session,
+                        platform.Id, cancellationToken: cancellationToken);
 
-                    await _appNotificationManager.NotifyPlatformConnectionAwaitingEmailVerification(user.Id, new List<string> { app.Id }, platform.Id, platform.ExternalId,
-                        platform.Name, session);
+                    await _appNotificationManager.NotifyPlatformConnectionAwaitingEmailVerification(user.Id,
+                        new List<string> {app.Id}, platform.Id, platform.ExternalId,
+                        platform.Name, session, cancellationToken);
 
                     return new PlatformConnectionStartResult(PlatformConnectionState.AwaitingEmailVerification);
 
-                } else if (existingUserEmail.UserEmailState == UserEmailState.AwaitingVerification)
+                }
+                else if (existingUserEmail.UserEmailState == UserEmailState.AwaitingVerification)
                 {
                     //the email validation has already been started
                     return new PlatformConnectionStartResult(PlatformConnectionState.AwaitingEmailVerification);
@@ -189,10 +212,13 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                     throw new NotImplementedException();
                 case PlatformIntegrationType.GigDataPlatformIntegration:
                     //TODO: call AF.CVData.PlatformIntegrations.GigDataPlatform to start connection there
-                    var platformDataForUser = await _platformDataManager.GetPlatformData(user.Id, platform.Id, session);
-                    await _appNotificationManager.NotifyPlatformConnectionDataUpdate(user.Id, new List<string> { app.Id },
-                        platform.Id, platform.ExternalId, platform.Name, platformDataForUser?.Id, session);
-                    await HandleEmailValidationCompletion(platform.Id, user, app, userPlatformEmailAddress, session);
+                    var platformDataForUser =
+                        await _platformDataManager.GetPlatformData(user.Id, platform.Id, session, cancellationToken);
+                    await _appNotificationManager.NotifyPlatformConnectionDataUpdate(user.Id, new List<string> {app.Id},
+                        platform.Id, platform.ExternalId, platform.Name, platformDataForUser?.Id, session,
+                        cancellationToken);
+                    await HandleEmailValidationCompletion(platform.Id, user, app, userPlatformEmailAddress, session,
+                        cancellationToken);
                     return new PlatformConnectionStartResult(PlatformConnectionState.Connected);
                 case PlatformIntegrationType.Manual:
                     throw new PlatformDoesNotSupportAutomaticConnection();
@@ -202,12 +228,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             }
         }
 
-        public async Task<string> CompleteConnectUserToOAuthPlatform(Guid externalPlatformId, string code, string stateStr,
-            IAsyncDocumentSession session)
+        public async Task<string> CompleteConnectUserToOAuthPlatform(Guid externalPlatformId, string code,
+            string stateStr,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
-            var platform = await _platformManager.GetPlatformByExternalId(externalPlatformId, session);
+            var platform =
+                await _platformManager.GetPlatformByExternalId(externalPlatformId, session, cancellationToken);
 
-            OAuthCompleteResult completeResult = null;
+            OAuthCompleteResult completeResult;
             switch (platform.IntegrationType)
             {
                 case PlatformIntegrationType.FreelancerIntegration:
@@ -225,7 +253,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                     throw new ArgumentException($"Unknown integration type {platform.IntegrationType}");
             }
 
-            return await HandleOAuthCompleteResult(completeResult, platform, session);
+            return await HandleOAuthCompleteResult(completeResult, platform, session, cancellationToken);
         }
 
         public IPlatformConnectionInfo GetPlatformConnectionInfo(User user, string platformId)
@@ -234,7 +262,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
             if (connection == null)
             {
-                throw new PlatformConnectionDoesNotExistException($"Platform connection for platform with id {platformId} does not exist for user with id {user.Id}");
+                throw new PlatformConnectionDoesNotExistException(
+                    $"Platform connection for platform with id {platformId} does not exist for user with id {user.Id}");
             }
 
             return connection.ConnectionInfo;
@@ -247,18 +276,22 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
             if (connection == null)
             {
-                throw new PlatformConnectionDoesNotExistException($"Platform connection for platform with id {platformId} does not exist for user with id {user.Id}");
+                throw new PlatformConnectionDoesNotExistException(
+                    $"Platform connection for platform with id {platformId} does not exist for user with id {user.Id}");
             }
 
             connection.ConnectionInfo = connectionInfo;
         }
 
-        private async Task<string> HandleOAuthCompleteResult(OAuthCompleteResult oAuthCompleteResult, Platform platform, IAsyncDocumentSession session)
+        private async Task<string> HandleOAuthCompleteResult(OAuthCompleteResult oAuthCompleteResult, Platform platform,
+            IAsyncDocumentSession session, CancellationToken cancellationToken)
         {
             var user = await _userManager.GetUserByExternalId(oAuthCompleteResult.UserId, session);
-            var app = await _appManager.GetAppFromApplicationId(oAuthCompleteResult.ApplicationId, session);
+            var app = await _appManager.GetAppFromApplicationId(oAuthCompleteResult.ApplicationId, session,
+                cancellationToken);
 
-            var existingPlatformConnection = user.PlatformConnections.SingleOrDefault(pc => pc.PlatformId == platform.Id);
+            var existingPlatformConnection =
+                user.PlatformConnections.SingleOrDefault(pc => pc.PlatformId == platform.Id);
             if (existingPlatformConnection != null)
             {
                 if (existingPlatformConnection.ConnectionInfo.NotificationInfos.All(ni => ni.AppId != app.Id))
@@ -269,11 +302,13 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 if (existingPlatformConnection.ConnectionInfo.GetType() != typeof(OAuthPlatformConnectionInfo))
                 {
                     //we have another type of connection right now for this platform. We will replace it with an oauth connection instead.
-                    _logger.LogInformation($"Had connection info of type {existingPlatformConnection.ConnectionInfo.GetType().Name}. Will replace that with OAuth connection info. UserId: {user.Id}, Platform: {platform.Name}");
+                    _logger.LogInformation(
+                        $"Had connection info of type {existingPlatformConnection.ConnectionInfo.GetType().Name}. Will replace that with OAuth connection info. UserId: {user.Id}, Platform: {platform.Name}");
                 }
 
                 var oauthPlatformConnectionInfo = new OAuthPlatformConnectionInfo(new Token(oAuthCompleteResult.Token));
-                foreach (var connectionInfoNotificationInfo in existingPlatformConnection.ConnectionInfo.NotificationInfos)
+                foreach (var connectionInfoNotificationInfo in existingPlatformConnection.ConnectionInfo
+                    .NotificationInfos)
                 {
                     oauthPlatformConnectionInfo.NotificationInfos.Add(connectionInfoNotificationInfo);
                 }
@@ -281,26 +316,30 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 existingPlatformConnection.ConnectionInfo = oauthPlatformConnectionInfo;
             }
 
-            
 
-            var platformConnection = new PlatformConnection(platform.Id, platform.Name, platform.ExternalId, 
-                new OAuthPlatformConnectionInfo(new Token(oAuthCompleteResult.Token)), platform.DataPollIntervalInSeconds);
+
+            var platformConnection = new PlatformConnection(platform.Id, platform.Name, platform.ExternalId,
+                new OAuthPlatformConnectionInfo(new Token(oAuthCompleteResult.Token)),
+                platform.DataPollIntervalInSeconds);
             platformConnection.ConnectionInfo.NotificationInfos.Add(new NotificationInfo(app.Id));
 
             user.PlatformConnections.Add(platformConnection);
 
-            await session.SaveChangesAsync();
+            await session.SaveChangesAsync(cancellationToken);
 
-            var platformDataForUser = await _platformDataManager.GetPlatformData(user.Id, platform.Id, session);
-            await _appNotificationManager.NotifyPlatformConnectionDataUpdate(user.Id, new List<string> { app.Id },
-                platform.Id, platform.ExternalId, platform.Name, platformDataForUser?.Id, session);
+            var platformDataForUser =
+                await _platformDataManager.GetPlatformData(user.Id, platform.Id, session, cancellationToken);
+            await _appNotificationManager.NotifyPlatformConnectionDataUpdate(user.Id, new List<string> {app.Id},
+                platform.Id, platform.ExternalId, platform.Name, platformDataForUser?.Id, session, cancellationToken);
 
             return GetRedirectUrl(oAuthCompleteResult.RedirectUrl, platform.ExternalId);
         }
 
-        private async Task HandleEmailValidationCompletion(string platformId, User user, App app, string userPlatformEmailAddress, IAsyncDocumentSession session)
+        private async Task HandleEmailValidationCompletion(string platformId, User user, App app,
+            string userPlatformEmailAddress, IAsyncDocumentSession session, CancellationToken cancellationToken)
         {
-            var existingPlatformConnection = user.PlatformConnections.SingleOrDefault(pc => pc.PlatformId == platformId);
+            var existingPlatformConnection =
+                user.PlatformConnections.SingleOrDefault(pc => pc.PlatformId == platformId);
             if (existingPlatformConnection != null)
             {
                 //add notification info
@@ -312,15 +351,18 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 if (existingPlatformConnection.ConnectionInfo.GetType() != typeof(EmailPlatformConnectionInfo))
                 {
                     //we have another type of connection to this platform. We will replace it with an email-connection. Last in last served.
-                    _logger.LogInformation($"Had connection info of type {existingPlatformConnection.ConnectionInfo.GetType().Name}. Will replace that with Email connection info. UserId: {user.Id}, PlatformId: {platformId}");
+                    _logger.LogInformation(
+                        $"Had connection info of type {existingPlatformConnection.ConnectionInfo.GetType().Name}. Will replace that with Email connection info. UserId: {user.Id}, PlatformId: {platformId}");
                 }
                 else if (((EmailPlatformConnectionInfo) existingPlatformConnection.ConnectionInfo).Email !=
                          userPlatformEmailAddress)
                 {
                     //email has changed for this user. create a replacement connection info
-                    _logger.LogInformation($"Email has changed from {((EmailPlatformConnectionInfo)existingPlatformConnection.ConnectionInfo).Email} to {userPlatformEmailAddress}. Will replace it. UserId: {user.Id}, PlatformId: {platformId}");
+                    _logger.LogInformation(
+                        $"Email has changed from {((EmailPlatformConnectionInfo) existingPlatformConnection.ConnectionInfo).Email} to {userPlatformEmailAddress}. Will replace it. UserId: {user.Id}, PlatformId: {platformId}");
                     var newConnectionInfo = new EmailPlatformConnectionInfo(userPlatformEmailAddress);
-                    foreach (var connectionInfoNotificationInfo in existingPlatformConnection.ConnectionInfo.NotificationInfos)
+                    foreach (var connectionInfoNotificationInfo in existingPlatformConnection.ConnectionInfo
+                        .NotificationInfos)
                     {
                         newConnectionInfo.NotificationInfos.Add(connectionInfoNotificationInfo);
                     }
@@ -331,12 +373,13 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 return;
             }
 
-            var platform = await _platformManager.GetPlatform(platformId, session);
+            var platform = await _platformManager.GetPlatform(platformId, session, cancellationToken);
 
             var emailConnectionInfo = new EmailPlatformConnectionInfo(userPlatformEmailAddress);
             emailConnectionInfo.NotificationInfos.Add(new NotificationInfo(app.Id));
 
-            var platformConnection = new PlatformConnection(platform.Id, platform.Name, platform.ExternalId, emailConnectionInfo, platform.DataPollIntervalInSeconds);
+            var platformConnection = new PlatformConnection(platform.Id, platform.Name, platform.ExternalId,
+                emailConnectionInfo, platform.DataPollIntervalInSeconds);
             user.PlatformConnections.Add(platformConnection);
         }
 
