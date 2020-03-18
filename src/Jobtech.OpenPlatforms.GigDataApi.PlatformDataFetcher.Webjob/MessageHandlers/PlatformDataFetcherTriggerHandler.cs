@@ -86,7 +86,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             await session.SaveChangesAsync(cancellationToken);
 
-            await _bus.DeferMessageLocal(ScheduleIntervalInSeconds, logger: _logger);
+            await _bus.DeferMessageLocal(new PlatformDataFetcherTriggerMessage(), ScheduleIntervalInSeconds, logger: _logger);
         }
 
         private static async Task<IList<KeyValuePair<string, IEnumerable<PlatformConnection>>>>

@@ -67,6 +67,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                     var logFormatter = new ExceptionAsObjectJsonFormatter(renderMessage: true);
                     logConf.WriteTo.Console(logFormatter);
                 }
+                else
+                {
+                    logConf.WriteTo.Console();
+                }
 
                 Log.Logger = logConf.CreateLogger();
 

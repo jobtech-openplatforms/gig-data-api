@@ -124,7 +124,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
             catch (Exception e)
             {
                 _logger.LogError(e, "Got error calling endpoint. Will schedule retry.");
-                await _bus.DeferMessageLocalWithExponentialBackOff(_messageContext.Headers, MaxMessageRetries,
+                await _bus.DeferMessageLocalWithExponentialBackOff(message, _messageContext.Headers, MaxMessageRetries,
                     _rebusConfiguration.ErrorQueueName, logger: _logger);
                 return;
             }
@@ -132,7 +132,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogError("Got non success status code ({HttpStatusCode}) calling endpoint. Will schedule retry.", response.StatusCode);
-                await _bus.DeferMessageLocalWithExponentialBackOff(_messageContext.Headers, MaxMessageRetries,
+                await _bus.DeferMessageLocalWithExponentialBackOff(message, _messageContext.Headers, MaxMessageRetries,
                     _rebusConfiguration.ErrorQueueName, logger: _logger);
                 return;
             }

@@ -10,7 +10,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Extensions
 {
     public static class RebusExtensions
     {
-        public static async Task DeferMessageLocal(this IBus bus, int deferForSeconds,
+        public static async Task DeferMessageLocal(this IBus bus, object message, int deferForSeconds,
             Dictionary<string, string> messageHeaders = null, int? maxRetries = null, string errorQueue = null,
             ILogger logger = null)
         {
@@ -44,10 +44,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Extensions
             numberOfRetries++;
             SetNumberOfRetries(messageHeaders, numberOfRetries);
 
-            await bus.DeferLocal(new TimeSpan(0, 0, deferForSeconds), messageHeaders);
+            await bus.DeferLocal(new TimeSpan(0, 0, deferForSeconds), message, messageHeaders);
         }
 
-        public static async Task DeferMessageLocalWithExponentialBackOff(this IBus bus,
+        public static async Task DeferMessageLocalWithExponentialBackOff(this IBus bus, object message,
             Dictionary<string, string> messageHeaders = null, int? maxRetries = null, string errorQueue = null,
             int maxDelayInSeconds = 1024, ILogger logger = null)
         {
@@ -82,7 +82,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Extensions
             numberOfRetries++;
             SetNumberOfRetries(messageHeaders, numberOfRetries);
 
-            await bus.DeferLocal(new TimeSpan(0, 0, deferForSeconds), messageHeaders);
+            await bus.DeferLocal(new TimeSpan(0, 0, deferForSeconds), message, messageHeaders);
         }
 
         const string RetriesHeaderName = "openplatform-numberOfRetries";
