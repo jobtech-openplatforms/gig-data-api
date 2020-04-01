@@ -150,6 +150,24 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             return JsonConvert.DeserializeObject<Auth0App>(jsonResponse);
         }
 
+        public async Task<Auth0App> UpdateCallbackUris(string clientId, string callbackUri, CancellationToken cancellationToken = default)
+        {
+            var payload = new
+            {
+                callbacks = new List<string> {callbackUri}
+            };
+
+            var jsonPayload = JsonConvert.SerializeObject(payload);
+
+            var accessToken = await GetAccessToken(cancellationToken);
+            Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
+            var response = await Client.PatchAsync($"/api/v2/clients/{clientId}",
+                new StringContent(jsonPayload, Encoding.UTF8, "application/json"), cancellationToken);
+
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+            return JsonConvert.DeserializeObject<Auth0App>(jsonResponse);
+        }
+
         internal class AccessToken
         {
             public AccessToken()

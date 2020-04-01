@@ -18,8 +18,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
         }
 
         public string Name { get; private set; }
-        public string NotificationEndpoint { get; private set; }
-        public string EmailVerificationNotificationEndpoint { get; private set; }
+        public string NotificationEndpoint { get; set; }
+        public string EmailVerificationNotificationEndpoint { get; set; }
         public string SecretKey { get; private set; }
         public string ApplicationId { get; private set; }
     }

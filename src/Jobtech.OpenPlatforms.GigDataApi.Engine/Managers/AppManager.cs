@@ -33,6 +33,15 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
         Task<IEnumerable<App>> GetAppsFromIds(IList<string> ids, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default);
+
+        Task SetNotificationEndpointUrl(string applicationId, string url, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
+
+        Task SetEmailVerificationNotificationEndpointUrl(string applicationId, string url,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default);
+
+        Task SetCallbackUrl(string applicationId, string url, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
     }
 
     public class AppManager : IAppManager
@@ -48,7 +57,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             string emailVerificationNotificationEndpoint, string authCallbackUri, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default)
         {
-            var auth0App = await _httpClient.CreateApp(name, authCallbackUri);
+            var auth0App = await _httpClient.CreateApp(name, authCallbackUri, cancellationToken);
             return await CreateApp(name, auth0App.ClientId, Guid.NewGuid().ToString(), notificationEndpoint,
                 emailVerificationNotificationEndpoint, session, cancellationToken);
         }
@@ -120,6 +129,26 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         {
             var apps = await session.LoadAsync<App>(ids, cancellationToken);
             return apps.Values;
+        }
+
+        public async Task SetNotificationEndpointUrl(string applicationId, string url, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
+        {
+            var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
+            app.NotificationEndpoint = url;
+        }
+
+        public async Task SetEmailVerificationNotificationEndpointUrl(string applicationId, string url,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
+        {
+            var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
+            app.EmailVerificationNotificationEndpoint = url;
+        }
+
+        public async Task SetCallbackUrl(string applicationId, string url, IAsyncDocumentSession session, CancellationToken cancellationToken = default)
+        {
+            var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
+            var _ = await _httpClient.UpdateCallbackUris(app.ApplicationId, url, cancellationToken);
         }
     }
 }
