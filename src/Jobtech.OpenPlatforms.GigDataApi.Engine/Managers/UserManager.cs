@@ -151,6 +151,34 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             return JsonConvert.DeserializeObject<Auth0UserProfile>(userProfileStr);
         }
 
+        public async Task<Auth0App> GetApp(string applicationId, CancellationToken cancellationToken = default)
+        {
+            var accessToken = await GetAccessToken(cancellationToken);
+            Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
+
+            HttpResponseMessage response;
+
+            try
+            {
+                response = await Client.GetAsync($"/api/v2/clients/{applicationId}", cancellationToken);
+            } catch (Exception e)
+            {
+                _logger.LogError(e, "Could not communicate with Auth0. Will throw");
+                throw new ExternalResourceCommunicationErrorException("Could not communicate with Auth0.", e);
+            }
+
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Got non success status code {httpStatusCode}. Message: '{message}' Will throw.",
+                    response.StatusCode, jsonResponse);
+                throw new ExternalResourceCommunicationErrorException($"Got non success status code from Auth0: {response.StatusCode}");
+            }
+
+            return JsonConvert.DeserializeObject<Auth0App>(jsonResponse);
+        }
+
         public async Task<Auth0App> CreateApp(string name, string callbackUri,
             CancellationToken cancellationToken = default)
         {
@@ -302,6 +330,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
     {
         public string Name { get; set; }
         [JsonProperty("client_id")] public string ClientId { get; set; }
+        public IEnumerable<string> Callbacks { get; set; }
     }
 
     public class ApproveApiHttpClient

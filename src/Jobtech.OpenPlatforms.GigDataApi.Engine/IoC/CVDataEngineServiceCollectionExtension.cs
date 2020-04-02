@@ -9,8 +9,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.IoC
 {
     public static class CVDataEngineServiceCollectionExtension
     {
-        public static IServiceCollection AddCVDataEngine(this IServiceCollection collection,
-            IConfiguration configuration)
+        public static IServiceCollection AddCVDataEngine(this IServiceCollection collection)
         {
             collection.AddTransient<IPlatformManager, PlatformManager>();
             collection.AddTransient<IPlatformConnectionManager, PlatformConnectionManager>();

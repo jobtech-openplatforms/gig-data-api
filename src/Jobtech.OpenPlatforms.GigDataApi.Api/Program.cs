@@ -80,22 +80,20 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
 
         public async Task SetupDataAsNeeded()
         {
-            using (var session = _dataStore.OpenAsyncSession())
+            using var session = _dataStore.OpenAsyncSession();
+            var existingPlatforms = await session.Query<Core.Entities.Platform>().ToListAsync();
+            if (!existingPlatforms.Any())
             {
-                var existingPlatforms = await session.Query<Core.Entities.Platform>().ToListAsync();
-                if (!existingPlatforms.Any())
-                {
-                    await CreateDefaultPlatforms(session);
-                }
-
-                var existingApps = await session.Query<App>().ToListAsync();
-                if (!existingApps.Any())
-                {
-                    await CreateDefaultApps(session);
-                }
-
-                await session.SaveChangesAsync();
+                await CreateDefaultPlatforms(session);
             }
+
+            var existingApps = await session.Query<App>().ToListAsync();
+            if (!existingApps.Any())
+            {
+                await CreateDefaultApps(session);
+            }
+
+            await session.SaveChangesAsync();
         }
 
         private async Task CreateDefaultPlatforms(IAsyncDocumentSession session)

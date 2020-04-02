@@ -95,7 +95,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
 
             services.AddCors();
 
-            services.AddCVDataEngine(Configuration);
+            services.AddCVDataEngine();
             services.AddCVDataEngineAuthentication(Configuration);
             services.AddCVDataEnginePlatformAuthentication(Configuration);
 

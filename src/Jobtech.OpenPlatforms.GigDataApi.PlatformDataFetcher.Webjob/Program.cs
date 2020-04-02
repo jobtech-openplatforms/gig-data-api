@@ -80,7 +80,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 var serviceProvider = services.BuildServiceProvider();
                 var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
-                services.AddCVDataEngine(hostContext.Configuration);
+                services.AddCVDataEngine();
                 services.AddCVDataEngineDataFetching(hostContext.Configuration);
                 services.AddCVDataEnginePlatformAuthentication(hostContext.Configuration);
 
