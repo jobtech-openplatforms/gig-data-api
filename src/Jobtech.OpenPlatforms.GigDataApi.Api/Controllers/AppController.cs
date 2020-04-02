@@ -47,7 +47,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             };
         }
 
-        [HttpPut("admin/set-notification-endpoint-url")]
+        [HttpPatch("admin/set-notification-endpoint-url")]
         public async Task<IActionResult> SetNotificationEndpointUrl([FromHeader(Name = "admin-key")] Guid adminKey, [FromBody] AppEndpointUpdateModel model, CancellationToken cancellationToken)
         {
             if (!_options.AdminKeys.Contains(adminKey))
@@ -62,7 +62,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             return Ok();
         }
 
-        [HttpPut("admin/set-email-verification-notification-endpoint-url")]
+        [HttpPatch("admin/set-email-verification-notification-endpoint-url")]
         public async Task<IActionResult> SetEmailVerificationNotificationEndpointUrl([FromHeader(Name = "admin-key")] Guid adminKey, [FromBody] AppEndpointUpdateModel model, CancellationToken cancellationToken)
         {
             if (!_options.AdminKeys.Contains(adminKey))
@@ -77,7 +77,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             return Ok();
         }
 
-        [HttpPut("admin/set-auth-callback-url")]
+        [HttpPatch("admin/set-auth-callback-url")]
         public async Task<IActionResult> SetAuthCallbackUrl([FromHeader(Name = "admin-key")] Guid adminKey, [FromBody] AppEndpointUpdateModel model, CancellationToken cancellationToken)
         {
             if (!_options.AdminKeys.Contains(adminKey))
