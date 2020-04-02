@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.IoC;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -93,14 +94,16 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         private readonly string _clientSecret;
         private readonly string _clientId;
         private readonly string _managementApiAudience;
+        private readonly ILogger<Auth0ManagementApiHttpClient> _logger;
 
         public Auth0ManagementApiHttpClient(HttpClient client,
-            IOptions<CVDataEngineServiceCollectionExtension.Auth0Configuration> options)
+            IOptions<CVDataEngineServiceCollectionExtension.Auth0Configuration> options, ILogger<Auth0ManagementApiHttpClient> logger)
         {
             Client = client;
             _clientId = options.Value.ManagementClientId;
             _clientSecret = options.Value.ManagementClientSecret;
             _managementApiAudience = options.Value.ManagementApiAudience;
+            _logger = logger;
         }
 
         public HttpClient Client { get; }
@@ -111,9 +114,28 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             {
                 var body = new AccessTokenBody(_clientId, _clientSecret, _managementApiAudience);
                 var bodyJson = JsonConvert.SerializeObject(body);
-                var response = await Client.PostAsync("/oauth/token",
-                    new StringContent(bodyJson, Encoding.UTF8, "application/json"), cancellationToken);
+
+                HttpResponseMessage response;
+
+                try
+                {
+                    response = await Client.PostAsync("/oauth/token",
+                        new StringContent(bodyJson, Encoding.UTF8, "application/json"), cancellationToken);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Could not communicate with Auth0. Will throw");
+                    throw new ExternalResourceCommunicationErrorException("Could not communicate with Auth0.", e);
+                }
+
                 var responseStr = await response.Content.ReadAsStringAsync();
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Got non success status code {httpStatusCode}. Message: '{message}' Will throw.",
+                        response.StatusCode, responseStr);
+                    throw new ExternalResourceCommunicationErrorException($"Got non success status code from Auth0: {response.StatusCode}");
+                }
+
                 var accessToken = JsonConvert.DeserializeObject<AccessToken>(responseStr);
                 _accessToken = accessToken;
             }
@@ -132,39 +154,101 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         public async Task<Auth0App> CreateApp(string name, string callbackUri,
             CancellationToken cancellationToken = default)
         {
-            var payload = new
+            object payload;
+
+            if (string.IsNullOrWhiteSpace(callbackUri))
             {
-                name,
-                callbacks = new List<string> {callbackUri},
-                app_type = "regular_web"
-            };
+                payload = new
+                {
+                    name,
+                    app_type = "regular_web"
+                };
+            }
+            else
+            {
+                payload = new
+                {
+                    name,
+                    callbacks = new List<string> { callbackUri },
+                    app_type = "regular_web"
+                };
+            }
 
             var jsonPayload = JsonConvert.SerializeObject(payload);
 
             var accessToken = await GetAccessToken(cancellationToken);
             Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
-            var response = await Client.PostAsync("/api/v2/clients",
-                new StringContent(jsonPayload, Encoding.UTF8, "application/json"), cancellationToken);
+
+            HttpResponseMessage response;
+            try
+            {
+                response = await Client.PostAsync("/api/v2/clients",
+                    new StringContent(jsonPayload, Encoding.UTF8, "application/json"), cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Could not communicate with Auth0. Will throw");
+                throw new ExternalResourceCommunicationErrorException("Could not communicate with Auth0.", e);
+            }
 
             var jsonResponse = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Got non success status code {httpStatusCode}. Message: '{message}' Will throw.",
+                    response.StatusCode, jsonResponse);
+                throw new ExternalResourceCommunicationErrorException($"Got non success status code from Auth0: {response.StatusCode}");
+            }
+
             return JsonConvert.DeserializeObject<Auth0App>(jsonResponse);
         }
 
         public async Task<Auth0App> UpdateCallbackUris(string clientId, string callbackUri, CancellationToken cancellationToken = default)
         {
-            var payload = new
+            object payload;
+
+            if (string.IsNullOrWhiteSpace(callbackUri))
             {
-                callbacks = new List<string> {callbackUri}
-            };
+                payload = new
+                {
+                    callbacks = new List<string>()
+                };
+            }
+            else
+            {
+                payload = new
+                {
+                    callbacks = new List<string> { callbackUri }
+                };
+            }
+
 
             var jsonPayload = JsonConvert.SerializeObject(payload);
 
             var accessToken = await GetAccessToken(cancellationToken);
             Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
-            var response = await Client.PatchAsync($"/api/v2/clients/{clientId}",
-                new StringContent(jsonPayload, Encoding.UTF8, "application/json"), cancellationToken);
+
+            HttpResponseMessage response;
+            try
+            {
+                response = await Client.PatchAsync($"/api/v2/clients/{clientId}",
+                    new StringContent(jsonPayload, Encoding.UTF8, "application/json"), cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Could not communicate with Auth0. Will throw");
+                throw new ExternalResourceCommunicationErrorException("Could not communicate with Auth0.", e);
+            }
 
             var jsonResponse = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Got non success status code {httpStatusCode}. Message: '{message}' Will throw.",
+                    response.StatusCode, jsonResponse);
+                throw new ExternalResourceCommunicationErrorException($"Got non success status code from Auth0: {response.StatusCode}");
+            }
+
             return JsonConvert.DeserializeObject<Auth0App>(jsonResponse);
         }
 

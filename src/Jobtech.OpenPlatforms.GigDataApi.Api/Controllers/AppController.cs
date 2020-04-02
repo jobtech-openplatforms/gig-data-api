@@ -112,7 +112,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
     {
         [Required]
         public string ApplicationId { get; set; }
-        [Required]
         public string Url { get; set; }
     }
 }

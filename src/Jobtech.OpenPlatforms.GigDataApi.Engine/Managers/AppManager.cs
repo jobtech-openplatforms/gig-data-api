@@ -73,8 +73,13 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
             if (existingAppWithApplicationId != null)
             {
-                throw new AppDoesAlreadyExistException($"App with application id {applicationId} does already exist");
+                throw new AppDoesAlreadyExistException($"App with application id '{applicationId}' does already exist");
             }
+
+            notificationEndpoint = string.IsNullOrWhiteSpace(notificationEndpoint) ? null : notificationEndpoint;
+            emailVerificationNotificationEndpoint = string.IsNullOrWhiteSpace(emailVerificationNotificationEndpoint)
+                ? null
+                : emailVerificationNotificationEndpoint;
 
             var app = new App(name, secretKey, applicationId, notificationEndpoint,
                 emailVerificationNotificationEndpoint);
@@ -135,14 +140,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             CancellationToken cancellationToken = default)
         {
             var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
-            app.NotificationEndpoint = url;
+            app.NotificationEndpoint = string.IsNullOrWhiteSpace(url) ? null : url;
         }
 
         public async Task SetEmailVerificationNotificationEndpointUrl(string applicationId, string url,
             IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
             var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
-            app.EmailVerificationNotificationEndpoint = url;
+            app.EmailVerificationNotificationEndpoint = string.IsNullOrWhiteSpace(url) ? null : url;
         }
 
         public async Task SetCallbackUrl(string applicationId, string url, IAsyncDocumentSession session, CancellationToken cancellationToken = default)
