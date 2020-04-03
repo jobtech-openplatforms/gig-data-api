@@ -27,7 +27,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         }
 
         [HttpGet("admin/{applicationId}")]
-        public async Task<ActionResult<AppInfoViewModel>> GetAppInfo([FromHeader(Name = "admin-key")] Guid adminKey, string applicationId, CancellationToken cancellationToken)
+        public async Task<ActionResult<AppInfoViewModel>> GetAppInfo([FromHeader(Name = "admin-key")] Guid adminKey,
+            string applicationId, CancellationToken cancellationToken)
         {
             if (!_options.AdminKeys.Contains(adminKey))
             {
@@ -65,7 +66,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         }
 
         [HttpPatch("admin/set-notification-endpoint-url")]
-        public async Task<IActionResult> SetNotificationEndpointUrl([FromHeader(Name = "admin-key")] Guid adminKey, [FromBody] AppEndpointUpdateModel model, CancellationToken cancellationToken)
+        public async Task<IActionResult> SetNotificationEndpointUrl([FromHeader(Name = "admin-key")] Guid adminKey,
+            [FromBody] AppEndpointUpdateModel model, CancellationToken cancellationToken)
         {
             if (!_options.AdminKeys.Contains(adminKey))
             {
@@ -80,7 +82,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         }
 
         [HttpPatch("admin/set-email-verification-notification-endpoint-url")]
-        public async Task<IActionResult> SetEmailVerificationNotificationEndpointUrl([FromHeader(Name = "admin-key")] Guid adminKey, [FromBody] AppEndpointUpdateModel model, CancellationToken cancellationToken)
+        public async Task<IActionResult> SetEmailVerificationNotificationEndpointUrl(
+            [FromHeader(Name = "admin-key")] Guid adminKey, [FromBody] AppEndpointUpdateModel model,
+            CancellationToken cancellationToken)
         {
             if (!_options.AdminKeys.Contains(adminKey))
             {
@@ -95,7 +99,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         }
 
         [HttpPatch("admin/set-auth-callback-url")]
-        public async Task<IActionResult> SetAuthCallbackUrl([FromHeader(Name = "admin-key")] Guid adminKey, [FromBody] AppEndpointUpdateModel model, CancellationToken cancellationToken)
+        public async Task<IActionResult> SetAuthCallbackUrl([FromHeader(Name = "admin-key")] Guid adminKey,
+            [FromBody] AppEndpointUpdateModel model, CancellationToken cancellationToken)
         {
             if (!_options.AdminKeys.Contains(adminKey))
             {
@@ -105,6 +110,37 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             using var session = _documentStore.OpenAsyncSession();
             await _appManager.SetCallbackUrl(model.ApplicationId, model.Url, session,
                 cancellationToken);
+            await session.SaveChangesAsync(cancellationToken);
+            return Ok();
+        }
+
+        [HttpPatch("admin/set-name")]
+        public async Task<IActionResult> SetName([FromHeader(Name = "admin-key")] Guid adminKey,
+            [FromBody] AppNameUpdateModel model, CancellationToken cancellationToken)
+        {
+            if (!_options.AdminKeys.Contains(adminKey))
+            {
+                return Unauthorized();
+            }
+
+            using var session = _documentStore.OpenAsyncSession();
+            await _appManager.SetName(model.ApplicationId, model.Name, session,
+                cancellationToken);
+            await session.SaveChangesAsync(cancellationToken);
+            return Ok();
+        }
+
+        [HttpPatch("admin/{applicationId}/rotate-secret")]
+        public async Task<IActionResult> RotateSecret([FromHeader(Name = "admin-key")] Guid adminKey,
+            string applicationId, CancellationToken cancellationToken)
+        {
+            if (!_options.AdminKeys.Contains(adminKey))
+            {
+                return Unauthorized();
+            }
+
+            using var session = _documentStore.OpenAsyncSession();
+            await _appManager.RotateSecret(applicationId, session, cancellationToken);
             await session.SaveChangesAsync(cancellationToken);
             return Ok();
         }
@@ -146,5 +182,13 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         [Required]
         public string ApplicationId { get; set; }
         public string Url { get; set; }
+    }
+
+    public class AppNameUpdateModel
+    {
+        [Required]
+        public string ApplicationId { get; set; }
+        [Required]
+        public string Name { get; set; }
     }
 }

@@ -45,6 +45,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
         Task SetCallbackUrl(string applicationId, string url, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default);
+
+        Task SetName(string applicationId, string name, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
+
+        Task RotateSecret(string applicationId, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
     }
 
     public class AppManager : IAppManager
@@ -92,7 +98,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             return app;
         }
 
-        public async Task<(App, Auth0App)> GetAppInfoFromApplicationId(string applicationId, IAsyncDocumentSession session, CancellationToken cancellationToken)
+        public async Task<(App, Auth0App)> GetAppInfoFromApplicationId(string applicationId,
+            IAsyncDocumentSession session, CancellationToken cancellationToken)
         {
             var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
             var auth0App = await _httpClient.GetApp(applicationId, cancellationToken);
@@ -163,10 +170,25 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             app.EmailVerificationNotificationEndpoint = string.IsNullOrWhiteSpace(url) ? null : url;
         }
 
-        public async Task SetCallbackUrl(string applicationId, string url, IAsyncDocumentSession session, CancellationToken cancellationToken = default)
+        public async Task SetCallbackUrl(string applicationId, string url, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
         {
             var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
             var _ = await _httpClient.UpdateCallbackUris(app.ApplicationId, url, cancellationToken);
+        }
+
+        public async Task SetName(string applicationId, string name, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
+        {
+            var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
+            app.Name = name;
+        }
+
+        public async Task RotateSecret(string applicationId, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
+        {
+            var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
+            app.SecretKey = Guid.NewGuid().ToString();
         }
     }
 }
