@@ -61,7 +61,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             await session.SaveChangesAsync(cancellationToken);
 
             return new AppInfoViewModel(createdApp.Name, createdApp.NotificationEndpoint,
-                createdApp.EmailVerificationNotificationEndpoint, createdAuth0App.Callbacks.FirstOrDefault(),
+                createdApp.EmailVerificationNotificationEndpoint, createdAuth0App.Callbacks?.FirstOrDefault(),
                 createdApp.SecretKey, createdApp.ApplicationId);
         }
 

@@ -13,16 +13,15 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
-using Raven.Client.Documents;
 using Rebus.Config;
 using Rebus.Routing.TypeBased;
 using Rebus.ServiceProvider;
-using Swashbuckle.AspNetCore.Swagger;
+using Serilog;
+using Serilog.Formatting.Elasticsearch;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Api
 {
@@ -37,12 +36,27 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
         public IConfiguration Configuration { get; }
         public IWebHostEnvironment HostingEnvironment { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc();
+            var formatElastic = Configuration.GetValue("FormatLogsInElasticFormat", false);
 
-            //services.AddLogging(configure => { configure.AddConsole(); });
+            // Logger configuration
+            var logConf = new LoggerConfiguration()
+                .ReadFrom.Configuration(Configuration);
+
+            if (formatElastic)
+            {
+                var logFormatter = new ExceptionAsObjectJsonFormatter(renderMessage: true);
+                logConf.WriteTo.Console(logFormatter);
+            }
+            else
+            {
+                logConf.WriteTo.Console();
+            }
+
+            Log.Logger = logConf.CreateLogger();
+
+            services.AddMvc();
 
             var auth0Section = Configuration.GetSection("Auth0");
 
@@ -99,12 +113,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
             services.AddCVDataEngineAuthentication(Configuration);
             services.AddCVDataEnginePlatformAuthentication(Configuration);
 
-
-            services.AddLogging(loggingBuilder =>
-            {
-                //loggingBuilder.AddConsole();
-            });
-
             var ravenDbSection = Configuration.GetSection("RavenDb");
             var urls = new List<string>();
             ravenDbSection.GetSection("Urls").Bind(urls);
@@ -118,7 +126,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
             DocumentStoreHolder.CertPwd = certPwd;
             DocumentStoreHolder.CertPath = certPath;
             DocumentStoreHolder.KeyPath = keyPath;
-            services.AddSingleton<IDocumentStore>(DocumentStoreHolder.Store);
+            services.AddSingleton(DocumentStoreHolder.Store);
 
             //Setup options for the app
             var configuredPlatformExternalIdsSection = Configuration.GetSection("PlatformExternalIds");
@@ -146,17 +154,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
-            else
-            {
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                app.UseHsts();
-                //use https redirection only in production right now, since ngrok-tunneling does not work with https right now.
-                app.UseHttpsRedirection();
-            }
+            app.UseSerilogRequestLogging();
 
             app.UseCors(options => {
                 options.AllowAnyOrigin();
