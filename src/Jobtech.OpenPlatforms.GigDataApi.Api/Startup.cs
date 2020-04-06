@@ -1,16 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB;
+using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.IoC;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -22,6 +27,7 @@ using Rebus.Routing.TypeBased;
 using Rebus.ServiceProvider;
 using Serilog;
 using Serilog.Formatting.Elasticsearch;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Api
 {
@@ -87,6 +93,27 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
 
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
+            static IList<string> ApplyGroupName(ApiDescription apiDescription)
+            {
+                var tags = new List<string>();
+                if (apiDescription.ActionDescriptor is ControllerActionDescriptor controllerActionDescriptor)
+                {
+                    var apiExplorerSettings = controllerActionDescriptor
+                        .ControllerTypeInfo.GetCustomAttributes(typeof(ApiExplorerSettingsAttribute), true)
+                        .Cast<ApiExplorerSettingsAttribute>().FirstOrDefault();
+                    if (apiExplorerSettings != null && !string.IsNullOrWhiteSpace(apiExplorerSettings.GroupName))
+                    {
+                        tags.Add(apiExplorerSettings.GroupName);
+                    }
+                    else
+                    {
+                        tags.Add(controllerActionDescriptor.ControllerName);
+                    }
+                }
+
+                return tags;
+            }
+
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo
@@ -102,6 +129,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
                 });
                 c.DescribeAllParametersInCamelCase();
 
+
+                c.TagActionsBy(ApplyGroupName);
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                 c.IncludeXmlComments(xmlPath);
@@ -211,7 +240,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
         {
             _logger.LogError(exception, "Unhandled exception from Exception Handler");
 
-            var code = HttpStatusCode.InternalServerError; // 500 if unexpected
+            var code = exception switch
+            {
+                AppDoesNotExistException _ => HttpStatusCode.NotFound,
+                PlatformDoNotExistException _ => HttpStatusCode.NotFound,
+                _ => HttpStatusCode.InternalServerError
+            };
 
             //if (ex is MyNotFoundException) code = HttpStatusCode.NotFound;
             //else if (ex is MyUnauthorizedException) code = HttpStatusCode.Unauthorized;
