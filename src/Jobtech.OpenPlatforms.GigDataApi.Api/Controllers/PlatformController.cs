@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Core;
@@ -13,8 +14,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using Raven.Client.Documents;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
@@ -56,10 +55,20 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Create a new platform
+        /// </summary>
+        /// <remarks>
+        /// Admin method
+        /// </remarks>
+        /// <param name="adminKey">The admin key</param>
+        /// <param name="model">The data needed for creating a new platform</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         [AllowAnonymous]
-        [ApiExplorerSettings(IgnoreApi = false)]
+        //[ApiExplorerSettings(IgnoreApi = false)]
         [HttpPost("admin/create")]
-        public async Task<ActionResult<PlatformViewModel>> CreatePlatform(
+        public async Task<ActionResult<PlatformInfoViewModel>> CreatePlatform(
             [FromHeader(Name = "admin-key")] Guid adminKey, [FromBody] CreatePlatformModel model,
             CancellationToken cancellationToken)
         {
@@ -76,12 +85,49 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
             await session.SaveChangesAsync(cancellationToken);
 
-            return new PlatformViewModel(createdPlatform.ExternalId, createdPlatform.Name,
-                createdPlatform.Description, createdPlatform.LogoUrl, createdPlatform.AuthenticationMechanism);
+            return new PlatformInfoViewModel(createdPlatform.ExternalId, createdPlatform.Name,
+                createdPlatform.Description, createdPlatform.LogoUrl, createdPlatform.IsInactive, createdPlatform.AuthenticationMechanism);
         }
 
+        /// <summary>
+        /// Get info about platform with the given platform id.
+        /// </summary>
+        /// <remarks>
+        /// Admin method
+        /// </remarks>
+        /// <param name="adminKey">The admin key</param>
+        /// <param name="platformId">The platform id</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         [AllowAnonymous]
-        [ApiExplorerSettings(IgnoreApi = false)]
+        //[ApiExplorerSettings(IgnoreApi = false)]
+        [HttpGet("{platformId}/admin/info")]
+        public async Task<ActionResult<PlatformInfoViewModel>> GetPlatformInfo(
+            [FromHeader(Name = "admin-key")] Guid adminKey, Guid platformId, CancellationToken cancellationToken)
+        {
+            if (!_options.AdminKeys.Contains(adminKey))
+            {
+                return Unauthorized();
+            }
+
+            using var session = _documentStore.OpenAsyncSession();
+            var platform = await _platformManager.GetPlatformByExternalId(platformId, session, cancellationToken);
+            return new PlatformInfoViewModel(platform.ExternalId, platform.Name, platform.Description, platform.LogoUrl,
+                platform.IsInactive, platform.AuthenticationMechanism);
+        }
+
+        /// <summary>
+        /// Set platform to active.
+        /// </summary>
+        /// <remarks>
+        /// Admin method
+        /// </remarks>
+        /// <param name="adminKey">The admin key</param>
+        /// <param name="platformId">The platform id</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        [AllowAnonymous]
+        //[ApiExplorerSettings(IgnoreApi = false)]
         [HttpPatch("{platformId}/admin/activate")]
         public async Task<ActionResult> ActivatePlatform([FromHeader(Name = "admin-key")] Guid adminKey,
             Guid platformId, CancellationToken cancellationToken)
@@ -100,10 +146,20 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             return Ok("Platform set to active");
         }
 
+        /// <summary>
+        /// Set platform to inactive
+        /// </summary>
+        /// <remarks>
+        /// Admin method
+        /// </remarks>
+        /// <param name="adminKey">The admin key</param>
+        /// <param name="platformId">The platform id</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         [AllowAnonymous]
-        [ApiExplorerSettings(IgnoreApi = false)]
-        [HttpPatch("{platformId}/admin/inactivate")]
-        public async Task<ActionResult> InactivatePlatform([FromHeader(Name = "admin-key")] Guid adminKey,
+        //[ApiExplorerSettings(IgnoreApi = false)]
+        [HttpPatch("{platformId}/admin/deactivate")]
+        public async Task<ActionResult> DeactivatePlatform([FromHeader(Name = "admin-key")] Guid adminKey,
             Guid platformId, CancellationToken cancellationToken)
         {
             if (!_options.AdminKeys.Contains(adminKey))
@@ -120,8 +176,19 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             return Ok("Platform set to inactive");
         }
 
+        /// <summary>
+        /// Set the logo url for a platform
+        /// </summary>
+        /// <remarks>
+        /// Admin method
+        /// </remarks>
+        /// <param name="adminKey">The admin key</param>
+        /// <param name="platformId">The platform id</param>
+        /// <param name="model">Logo url data</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         [AllowAnonymous]
-        [ApiExplorerSettings(IgnoreApi = false)]
+        //[ApiExplorerSettings(IgnoreApi = false)]
         [HttpPatch("{platformId}/admin/set-logourl")]
         public async Task<ActionResult> SetLogoUrl([FromHeader(Name = "admin-key")] Guid adminKey, Guid platformId,
             [FromBody] SetLogoUrlModel model, CancellationToken cancellationToken)
@@ -140,8 +207,19 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             return Ok("Platform logo url updated");
         }
 
+        /// <summary>
+        /// Set the description for a platform
+        /// </summary>
+        /// <remarks>
+        /// Admin method
+        /// </remarks>
+        /// <param name="adminKey">The admin key</param>
+        /// <param name="platformId">The platform id</param>
+        /// <param name="model">The description data</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         [AllowAnonymous]
-        [ApiExplorerSettings(IgnoreApi = false)]
+        //[ApiExplorerSettings(IgnoreApi = false)]
         [HttpPatch("{platformId}/admin/set-description")]
         public async Task<ActionResult> SetDescription([FromHeader(Name = "admin-key")] Guid adminKey, Guid platformId,
             [FromBody] SetDescriptionModel model, CancellationToken cancellationToken)
@@ -193,6 +271,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                 platform.LogoUrl, false, platform.AuthenticationMechanism);
         }
 
+        /// <summary>
+        /// Get the connection status for all platforms available in the system.
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         [HttpGet("connection-status")]
         public async Task<ActionResult<IEnumerable<PlatformUserConnectionInfoViewModel>>>
             GetPlatformUserConnectionInfos(CancellationToken cancellationToken)
@@ -218,6 +301,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             return platformUserConnectionInfoViewModels;
         }
 
+        /// <summary>
+        /// Get the connection state for connected platforms.
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         [HttpGet("connection-state")]
         public async Task<ActionResult<PlatformUserConnectionStateViewModel>> GetUserPlatformConnectionState(
             CancellationToken cancellationToken)
@@ -238,6 +326,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             return new PlatformUserConnectionStateViewModel(user.PlatformConnections, platforms, apps);
         }
 
+        /// <summary>
+        /// Set the connection state for a given platform.
+        /// </summary>
+        /// <param name="model">The state update data</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         [HttpPost("connection-state")]
         public async Task<ActionResult<PlatformUserConnectionStateViewModel>> UpdateUserPlatformConnectionState(
             [FromBody, Required] UserPlatformConnectionStateUpdateModel model, CancellationToken cancellationToken)
@@ -351,6 +445,13 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             return new PlatformUserConnectionStateViewModel(user.PlatformConnections, platforms, apps);
         }
 
+        /// <summary>
+        /// Initiate a data fetch for the platform with the given id
+        /// </summary>
+        /// <param name="platformId">The platform id</param>
+        /// <param name="model"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         [HttpPost("{platformId}/initiate-data-fetch")]
         public async Task<ActionResult> InitiateDataFetch(Guid platformId,
             [FromBody, Required] InitiateDataFetchModel model, CancellationToken cancellationToken)
@@ -374,6 +475,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Get a list of all available platforms.
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         [AllowAnonymous]
         [HttpGet("available")]
         public async Task<ActionResult<IEnumerable<PlatformViewModel>>> GetAllAvailablePlatforms(
@@ -420,7 +526,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
     {
         [Required] public string Name { get; set; }
 
-        [Required, JsonConverter(typeof(StringEnumConverter))]
+        [Required, JsonConverter(typeof(JsonStringEnumConverter))]
         public PlatformAuthenticationMechanism AuthMechanism { get; set; }
 
         [Required] public decimal MinRating { get; set; }
@@ -497,8 +603,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         public Guid PlatformId { get; set; }
         public string Name { get; set; }
 
-        [JsonConverter(typeof(StringEnumConverter))]
-        public PlatformAuthenticationMechanism? AuthMechanism { get; set; }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public PlatformAuthenticationMechanism AuthMechanism { get; set; }
 
         public string Description { get; set; }
         public string LogoUrl { get; set; }
@@ -515,6 +621,18 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         }
 
         public bool IsConnected { get; set; }
+    }
+
+    public class PlatformInfoViewModel : PlatformViewModel
+    {
+        public PlatformInfoViewModel(Guid externalPlatformId, string name, string description, string logoUrl,
+            bool isInactive, PlatformAuthenticationMechanism authMechanism) : base(externalPlatformId, name,
+            description, logoUrl, authMechanism)
+        {
+            IsInactive = isInactive;
+        }
+
+        public bool IsInactive { get; set; }
     }
 
     public class AppUserConnectionViewModel

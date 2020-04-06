@@ -73,14 +73,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         public async Task<Platform> GetPlatformByExternalId(Guid externalId, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default)
         {
-            var platformWithName = await session.Query<Platform>()
+            var platform = await session.Query<Platform>()
                 .SingleOrDefaultAsync(p => p.ExternalId == externalId, cancellationToken);
-            if (platformWithName == null)
+            if (platform == null)
             {
                 throw new PlatformDoNotExistException($"Platform with external id {externalId} does not exist");
             }
 
-            return platformWithName;
+            return platform;
         }
 
         public async Task<IDictionary<string, Platform>> GetPlatforms(IList<string> platformIds,
