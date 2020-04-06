@@ -8,25 +8,35 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 
-namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
+namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
 {
-    //[ApiExplorerSettings(IgnoreApi = true)]
-    [Route("api/[controller]")]
+    /// <summary>
+    /// Admin methods for creating and manipulating apps.
+    /// </summary>
+    [Route("api/[controller]/admin")]
     [ApiController]
-    public class AppController : ControllerBase
+    [ApiExplorerSettings(GroupName = "Admin", IgnoreApi = false)]
+    public class AppAdminController : ControllerBase
     {
         private readonly IAppManager _appManager;
         private readonly IDocumentStore _documentStore;
         private readonly Options _options;
 
-        public AppController(IAppManager appManager, IDocumentStore documentStore, IOptions<Options> options)
+        public AppAdminController(IAppManager appManager, IDocumentStore documentStore, IOptions<Options> options)
         {
             _appManager = appManager;
             _documentStore = documentStore;
             _options = options.Value;
         }
 
-        [HttpGet("admin/{applicationId}")]
+        /// <summary>
+        /// Get info for an existing app.
+        /// </summary>
+        /// <param name="adminKey">The admin key</param>
+        /// <param name="applicationId">The application id</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        [HttpGet("{applicationId}")]
         public async Task<ActionResult<AppInfoViewModel>> GetAppInfo([FromHeader(Name = "admin-key")] Guid adminKey,
             string applicationId, CancellationToken cancellationToken)
         {
@@ -45,7 +55,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                 app.SecretKey, app.ApplicationId);
         }
 
-        [HttpPost("admin/create")]
+        /// <summary>
+        /// Create a new application.
+        /// </summary>
+        /// <param name="adminKey">The admin key</param>
+        /// <param name="model">The app creation data</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        [HttpPost]
         public async Task<ActionResult<AppInfoViewModel>> CreateApp([FromHeader(Name = "admin-key")] Guid adminKey,
             [FromBody] AppCreateModel model, CancellationToken cancellationToken)
         {
@@ -65,9 +82,17 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                 createdApp.SecretKey, createdApp.ApplicationId);
         }
 
-        [HttpPatch("admin/set-notification-endpoint-url")]
+        /// <summary>
+        /// Set 
+        /// </summary>
+        /// <param name="adminKey"></param>
+        /// <param name="applicationId"></param>
+        /// <param name="model"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        [HttpPatch("{applicationId}/set-notification-endpoint-url")]
         public async Task<IActionResult> SetNotificationEndpointUrl([FromHeader(Name = "admin-key")] Guid adminKey,
-            [FromBody] AppEndpointUpdateModel model, CancellationToken cancellationToken)
+            string applicationId, [FromBody] AppEndpointUpdateModel model, CancellationToken cancellationToken)
         {
             if (!_options.AdminKeys.Contains(adminKey))
             {
@@ -75,31 +100,15 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             }
 
             using var session = _documentStore.OpenAsyncSession();
-            await _appManager.SetNotificationEndpointUrl(model.ApplicationId, model.Url, session,
+            await _appManager.SetNotificationEndpointUrl(applicationId, model.Url, session,
                 cancellationToken);
             await session.SaveChangesAsync(cancellationToken);
             return Ok();
         }
 
-        [HttpPatch("admin/set-email-verification-notification-endpoint-url")]
+        [HttpPatch("{applicationId}/set-email-verification-notification-endpoint-url")]
         public async Task<IActionResult> SetEmailVerificationNotificationEndpointUrl(
-            [FromHeader(Name = "admin-key")] Guid adminKey, [FromBody] AppEndpointUpdateModel model,
-            CancellationToken cancellationToken)
-        {
-            if (!_options.AdminKeys.Contains(adminKey))
-            {
-                return Unauthorized();
-            }
-
-            using var session = _documentStore.OpenAsyncSession();
-            await _appManager.SetEmailVerificationNotificationEndpointUrl(model.ApplicationId, model.Url, session,
-                cancellationToken);
-            await session.SaveChangesAsync(cancellationToken);
-            return Ok();
-        }
-
-        [HttpPatch("admin/set-auth-callback-url")]
-        public async Task<IActionResult> SetAuthCallbackUrl([FromHeader(Name = "admin-key")] Guid adminKey,
+            [FromHeader(Name = "admin-key")] Guid adminKey, string applicationId, 
             [FromBody] AppEndpointUpdateModel model, CancellationToken cancellationToken)
         {
             if (!_options.AdminKeys.Contains(adminKey))
@@ -108,15 +117,15 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             }
 
             using var session = _documentStore.OpenAsyncSession();
-            await _appManager.SetCallbackUrl(model.ApplicationId, model.Url, session,
+            await _appManager.SetEmailVerificationNotificationEndpointUrl(applicationId, model.Url, session,
                 cancellationToken);
             await session.SaveChangesAsync(cancellationToken);
             return Ok();
         }
 
-        [HttpPatch("admin/set-name")]
-        public async Task<IActionResult> SetName([FromHeader(Name = "admin-key")] Guid adminKey,
-            [FromBody] AppNameUpdateModel model, CancellationToken cancellationToken)
+        [HttpPatch("{applicationId}/set-auth-callback-url")]
+        public async Task<IActionResult> SetAuthCallbackUrl([FromHeader(Name = "admin-key")] Guid adminKey,
+            string applicationId, [FromBody] AppEndpointUpdateModel model, CancellationToken cancellationToken)
         {
             if (!_options.AdminKeys.Contains(adminKey))
             {
@@ -124,13 +133,29 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             }
 
             using var session = _documentStore.OpenAsyncSession();
-            await _appManager.SetName(model.ApplicationId, model.Name, session,
+            await _appManager.SetCallbackUrl(applicationId, model.Url, session,
                 cancellationToken);
             await session.SaveChangesAsync(cancellationToken);
             return Ok();
         }
 
-        [HttpPatch("admin/{applicationId}/rotate-secret")]
+        [HttpPatch("{applicationId}/set-name")]
+        public async Task<IActionResult> SetName([FromHeader(Name = "admin-key")] Guid adminKey,
+            string applicationId, [FromBody] AppNameUpdateModel model, CancellationToken cancellationToken)
+        {
+            if (!_options.AdminKeys.Contains(adminKey))
+            {
+                return Unauthorized();
+            }
+
+            using var session = _documentStore.OpenAsyncSession();
+            await _appManager.SetName(applicationId, model.Name, session,
+                cancellationToken);
+            await session.SaveChangesAsync(cancellationToken);
+            return Ok();
+        }
+
+        [HttpPatch("{applicationId}/rotate-secret")]
         public async Task<IActionResult> RotateSecret([FromHeader(Name = "admin-key")] Guid adminKey,
             string applicationId, CancellationToken cancellationToken)
         {
@@ -179,15 +204,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
     public class AppEndpointUpdateModel
     {
-        [Required]
-        public string ApplicationId { get; set; }
         public string Url { get; set; }
     }
 
     public class AppNameUpdateModel
     {
-        [Required]
-        public string ApplicationId { get; set; }
         [Required]
         public string Name { get; set; }
     }

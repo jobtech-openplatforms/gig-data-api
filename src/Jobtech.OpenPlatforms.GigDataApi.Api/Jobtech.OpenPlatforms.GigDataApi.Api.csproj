@@ -12,6 +12,7 @@
     <PackageReference Include="Auth0.ManagementApi" Version="7.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.1.3" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.1.1" />
     <PackageReference Include="RavenDB.Client" Version="4.2.101" />
     <PackageReference Include="Rebus.AzureServiceBus" Version="7.1.3" />
     <PackageReference Include="Rebus.ServiceProvider" Version="5.0.6" />
@@ -31,6 +32,10 @@
     <ProjectReference Include="..\Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB\Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB.csproj" />
     <ProjectReference Include="..\Jobtech.OpenPlatforms.GigDataApi.Common\Jobtech.OpenPlatforms.GigDataApi.Common.csproj" />
     <ProjectReference Include="..\Jobtech.OpenPlatforms.GigDataApi.Engine\Jobtech.OpenPlatforms.GigDataApi.Engine.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Exceptions\" />
   </ItemGroup>
 
 </Project>
