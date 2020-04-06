@@ -15,7 +15,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
     /// </summary>
     [Route("api/[controller]/admin")]
     [ApiController]
-    [ApiExplorerSettings(GroupName = "Admin", IgnoreApi = false)]
     public class AppAdminController : ControllerBase
     {
         private readonly IAppManager _appManager;
@@ -73,7 +72,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
 
             using var session = _documentStore.OpenAsyncSession();
             var (createdApp, createdAuth0App) = await _appManager.CreateApp(model.Name, model.NotificationEndpointUrl,
-                model.EmailVerificationNotificationEndpointUrl, model.AuthCallbackUrl, session, cancellationToken);
+                model.EmailVerificationNotificationEndpointUrl, model.AuthCallbackUrl, true, session, cancellationToken);
 
             await session.SaveChangesAsync(cancellationToken);
 
@@ -83,7 +82,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
         }
 
         /// <summary>
-        /// Set 
+        /// Set notification endpoint url
         /// </summary>
         /// <param name="adminKey"></param>
         /// <param name="applicationId"></param>

@@ -16,7 +16,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
     /// </summary>
     [Route("api/[controller]/admin")]
     [ApiController]
-    [ApiExplorerSettings(GroupName = "Admin", IgnoreApi = false)]
     public class PlatformAdminController : AdminControllerBase
     {
         private readonly IPlatformManager _platformManager;
