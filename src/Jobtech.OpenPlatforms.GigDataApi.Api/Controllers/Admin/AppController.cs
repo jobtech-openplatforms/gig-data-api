@@ -15,13 +15,13 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
     /// </summary>
     [Route("api/[controller]/admin")]
     [ApiController]
-    public class AppAdminController : ControllerBase
+    public class AppController : ControllerBase
     {
         private readonly IAppManager _appManager;
         private readonly IDocumentStore _documentStore;
         private readonly Options _options;
 
-        public AppAdminController(IAppManager appManager, IDocumentStore documentStore, IOptions<Options> options)
+        public AppController(IAppManager appManager, IDocumentStore documentStore, IOptions<Options> options)
         {
             _appManager = appManager;
             _documentStore = documentStore;
