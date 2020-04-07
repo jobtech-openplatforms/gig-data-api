@@ -82,11 +82,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             if (connectionForPlatform != null)
             {
                 return new PlatformUserConnectionInfoViewModel(platform.ExternalId, platform.Name,
-                    platform.Description, platform.LogoUrl, true, platform.AuthenticationMechanism);
+                    platform.Description, platform.LogoUrl, platform.WebsiteUrl, true,
+                    platform.AuthenticationMechanism);
             }
 
             return new PlatformUserConnectionInfoViewModel(platform.ExternalId, platform.Name, platform.Description,
-                platform.LogoUrl, false, platform.AuthenticationMechanism);
+                platform.LogoUrl, platform.WebsiteUrl, false, platform.AuthenticationMechanism);
         }
 
         /// <summary>
@@ -113,7 +114,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             {
                 var isConnected = user.PlatformConnections.Any(pc => pc.PlatformId == platform.Id);
                 platformUserConnectionInfoViewModels.Add(new PlatformUserConnectionInfoViewModel(
-                    platform.ExternalId, platform.Name, platform.Description, platform.LogoUrl, isConnected,
+                    platform.ExternalId, platform.Name, platform.Description, platform.LogoUrl, platform.WebsiteUrl,
+                    isConnected,
                     platform.AuthenticationMechanism));
             }
 
@@ -312,6 +314,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             var platform = await _platformManager.GetPlatformByExternalId(platformId, session, cancellationToken);
 
             return new PlatformViewModel(platform.ExternalId, platform.Name, platform.Description, platform.LogoUrl,
+                platform.WebsiteUrl,
                 platform.AuthenticationMechanism);
         }
 
@@ -330,7 +333,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             var platforms = await _platformManager.GetAllPlatforms(session, cancellationToken);
 
             return platforms.Select(p =>
-                    new PlatformViewModel(p.ExternalId, p.Name, p.Description, p.LogoUrl, p.AuthenticationMechanism))
+                    new PlatformViewModel(p.ExternalId, p.Name, p.Description, p.LogoUrl, p.WebsiteUrl,
+                        p.AuthenticationMechanism))
                 .ToList();
         }
 
@@ -381,7 +385,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             {
                 var platform = platforms.Single(p => p.Id == platformConnection.PlatformId);
                 Platforms.Add(new PlatformUserConnectionInfoViewModel(platform.ExternalId, platform.Name,
-                    platform.Description, platform.LogoUrl, true, platform.AuthenticationMechanism));
+                    platform.Description, platform.LogoUrl, platform.WebsiteUrl, true,
+                    platform.AuthenticationMechanism));
 
                 foreach (var connectionInfoNotificationInfo in platformConnection.ConnectionInfo.NotificationInfos)
                 {
@@ -407,7 +412,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
     public class PlatformViewModel
     {
 
-        public PlatformViewModel(Guid externalId, string name, string description, string logoUrl,
+        public PlatformViewModel(Guid externalId, string name, string description, string logoUrl, string websiteUrl,
             PlatformAuthenticationMechanism authMechanism)
         {
             PlatformId = externalId;
@@ -415,29 +420,32 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             Description = description;
             LogoUrl = logoUrl;
             AuthMechanism = authMechanism;
+            WebsiteUrl = websiteUrl;
         }
 
-        public Guid PlatformId { get; set; }
-        public string Name { get; set; }
+        public Guid PlatformId { get; private set; }
+        public string Name { get; private set; }
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public PlatformAuthenticationMechanism AuthMechanism { get; set; }
+        public PlatformAuthenticationMechanism AuthMechanism { get; private set; }
 
-        public string Description { get; set; }
-        public string LogoUrl { get; set; }
+        public string Description { get; private set; }
+        public string LogoUrl { get; private set; }
+        public string WebsiteUrl { get; private set; }
     }
 
     public class PlatformUserConnectionInfoViewModel : PlatformViewModel
     {
         public PlatformUserConnectionInfoViewModel(Guid externalPlatformId, string name, string description,
-            string logoUrl, bool isConnected,
+            string logoUrl, string websiteUrl, bool isConnected,
             PlatformAuthenticationMechanism authMechanism) : base(externalPlatformId, name, description, logoUrl,
+            websiteUrl,
             authMechanism)
         {
             IsConnected = isConnected;
         }
 
-        public bool IsConnected { get; set; }
+        public bool IsConnected { get; private set; }
     }
 
     public class AppUserConnectionViewModel
@@ -449,8 +457,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             ConnectedPlatforms = connectedPlatforms;
         }
 
-        public string Name { get; set; }
-        public string AppId { get; set; }
-        public IList<Guid> ConnectedPlatforms { get; set; }
+        public string Name { get; private set; }
+        public string AppId { get; private set; }
+        public IList<Guid> ConnectedPlatforms { get; private set; }
     }
 }

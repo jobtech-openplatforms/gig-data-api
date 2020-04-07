@@ -30,17 +30,19 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         {
             using var session = _documentStore.OpenAsyncSession();
             var app = await _appManager.GetAppFromApplicationId(applicationId, session, cancellationToken);
-            return new AppViewModel(app.ApplicationId, app.Name, app.Description, app.LogoUrl);
+            return new AppViewModel(app.ApplicationId, app.Name, app.Description, app.LogoUrl, app.WebsiteUrl);
         }
 
         [HttpGet("available")]
         [AllowAnonymous]
         [Produces("application/json")]
-        public async Task<IList<AppViewModel>> GetAppInfos(CancellationToken cancellationToken, [FromQuery] int page = 0, [FromQuery] int pageSize = 20)
+        public async Task<IList<AppViewModel>> GetAppInfos(CancellationToken cancellationToken,
+            [FromQuery] int page = 0, [FromQuery] int pageSize = 20)
         {
             using var session = _documentStore.OpenAsyncSession();
             var apps = await _appManager.GetAllActiveApps(page, pageSize, session, cancellationToken);
-            return apps.Select(a => new AppViewModel(a.ApplicationId, a.Name, a.Description, a.LogoUrl)).ToList();
+            return apps.Select(a => new AppViewModel(a.ApplicationId, a.Name, a.Description, a.LogoUrl, a.WebsiteUrl))
+                .ToList();
         }
 
 
@@ -48,17 +50,19 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
     public class AppViewModel
     {
-        public AppViewModel(string applicationId, string name, string description, string logoUrl)
+        public AppViewModel(string applicationId, string name, string description, string logoUrl, string websiteUrl)
         {
             ApplicationId = applicationId;
             Name = name;
             Description = description;
             LogoUrl = logoUrl;
+            WebsiteUrl = websiteUrl;
         }
 
         public string ApplicationId { get; private set; }
         public string Name { get; private set; }
         public string Description { get; private set; }
         public string LogoUrl { get; private set; }
+        public string WebsiteUrl { get; private set; }
     }
 }
