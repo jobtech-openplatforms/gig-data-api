@@ -73,12 +73,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
         public async Task<ActionResult<PlatformInfoViewModel>> GetPlatformInfo(
             [FromHeader(Name = "admin-key")] Guid adminKey, Guid platformId, CancellationToken cancellationToken)
         {
-            //if (!_options.AdminKeys.Contains(adminKey))
-            //{
-            //    return Unauthorized();
-            //}
+            if (!_options.AdminKeys.Contains(adminKey))
+            {
+                return Unauthorized();
+            }
 
-            ValidateAdminKey(adminKey);
+            //ValidateAdminKey(adminKey);
 
             using var session = _documentStore.OpenAsyncSession();
             var platform = await _platformManager.GetPlatformByExternalId(platformId, session, cancellationToken);

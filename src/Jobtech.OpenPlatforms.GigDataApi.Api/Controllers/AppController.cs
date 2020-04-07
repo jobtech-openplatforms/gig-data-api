@@ -28,7 +28,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         {
             using var session = _documentStore.OpenAsyncSession();
             var app = await _appManager.GetAppFromApplicationId(applicationId, session, cancellationToken);
-            return new AppViewModel(app.Name, app.ApplicationId);
+            return new AppViewModel(app.ApplicationId, app.Name, app.Description, app.LogoUrl);
         }
 
         [HttpGet("available")]
@@ -37,7 +37,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         {
             using var session = _documentStore.OpenAsyncSession();
             var apps = await _appManager.GetAllActiveApps(page, pageSize, session, cancellationToken);
-            return apps.Select(a => new AppViewModel(a.Name, a.ApplicationId)).ToList();
+            return apps.Select(a => new AppViewModel(a.ApplicationId, a.Name, a.Description, a.LogoUrl)).ToList();
         }
 
 
@@ -45,13 +45,17 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
     public class AppViewModel
     {
-        public AppViewModel(string name, string applicationId)
+        public AppViewModel(string applicationId, string name, string description, string logoUrl)
         {
-            Name = name;
             ApplicationId = applicationId;
+            Name = name;
+            Description = description;
+            LogoUrl = logoUrl;
         }
 
         public string ApplicationId { get; private set; }
         public string Name { get; private set; }
+        public string Description { get; private set; }
+        public string LogoUrl { get; private set; }
     }
 }

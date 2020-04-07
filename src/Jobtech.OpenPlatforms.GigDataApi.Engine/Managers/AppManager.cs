@@ -13,11 +13,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
     public interface IAppManager
     {
         Task<(App, Auth0App)> CreateApp(string name, string notificationEndpoint,
-            string emailVerificationNotificationEndpoint, string authCallbackUri, bool isDisabled, IAsyncDocumentSession session,
+            string emailVerificationNotificationEndpoint, string authCallbackUri,
+            string description, string logoUrl, IAsyncDocumentSession session, bool isInactive = false,
             CancellationToken cancellationToken = default);
 
-        Task<App> CreateApp(string name, string applicationId, string secretKey, string notificationEndpoint,
-            string emailVerificationNotificationEndpoint, bool isDisabled, IAsyncDocumentSession session,
+        Task<App> CreateApp(string name, string applicationId, string secretKey,
+            string notificationEndpoint,
+            string emailVerificationNotificationEndpoint, string description, string logoUrl,
+            IAsyncDocumentSession session, bool isInactive = false,
             CancellationToken cancellationToken = default);
 
         Task<(App, Auth0App)> GetAppInfoFromApplicationId(string applicationId, IAsyncDocumentSession session,
@@ -52,6 +55,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         Task SetName(string applicationId, string name, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default);
 
+        Task SetDescription(string applicationId, string description, IAsyncDocumentSession session,
+            CancellationToken cancellationToken);
+
+        Task SetLogoUrl(string applicationId, string logoUrl, IAsyncDocumentSession session,
+            CancellationToken cancellationToken);
+
         Task RotateSecret(string applicationId, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default);
     }
@@ -66,19 +75,21 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         }
 
         public async Task<(App, Auth0App)> CreateApp(string name, string notificationEndpoint,
-            string emailVerificationNotificationEndpoint, string authCallbackUri, bool isDisabled, IAsyncDocumentSession session,
+            string emailVerificationNotificationEndpoint, string authCallbackUri, 
+            string description, string logoUrl, IAsyncDocumentSession session, bool isInactive = false,
             CancellationToken cancellationToken = default)
         {
             var auth0App = await _httpClient.CreateApp(name, authCallbackUri, cancellationToken);
             var app = await CreateApp(name, auth0App.ClientId, Guid.NewGuid().ToString(), notificationEndpoint,
-                emailVerificationNotificationEndpoint, isDisabled, session, cancellationToken);
+                emailVerificationNotificationEndpoint, description, logoUrl, session, isInactive, cancellationToken);
 
             return (app, auth0App);
         }
 
         public async Task<App> CreateApp(string name, string applicationId, string secretKey,
             string notificationEndpoint,
-            string emailVerificationNotificationEndpoint, bool isDisabled, IAsyncDocumentSession session,
+            string emailVerificationNotificationEndpoint, string description, string logoUrl,
+            IAsyncDocumentSession session, bool isInactive = false,
             CancellationToken cancellationToken = default)
         {
             var existingAppWithApplicationId =
@@ -96,7 +107,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 : emailVerificationNotificationEndpoint;
 
             var app = new App(name, secretKey, applicationId, notificationEndpoint,
-                emailVerificationNotificationEndpoint, isDisabled);
+                emailVerificationNotificationEndpoint, description, logoUrl, isInactive);
             await session.StoreAsync(app, cancellationToken);
             return app;
         }
@@ -197,6 +208,20 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         {
             var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
             app.Name = name;
+        }
+
+        public async Task SetDescription(string applicationId, string description, IAsyncDocumentSession session,
+            CancellationToken cancellationToken)
+        {
+            var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
+            app.Description = description;
+        }
+
+        public async Task SetLogoUrl(string applicationId, string logoUrl, IAsyncDocumentSession session,
+            CancellationToken cancellationToken)
+        {
+            var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
+            app.LogoUrl = logoUrl;
         }
 
         public async Task RotateSecret(string applicationId, IAsyncDocumentSession session,

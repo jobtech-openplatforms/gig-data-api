@@ -50,7 +50,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
                 await _appManager.GetAppInfoFromApplicationId(applicationId, session, cancellationToken);
 
             return new AppInfoViewModel(app.Name, app.NotificationEndpoint,
-                app.EmailVerificationNotificationEndpoint, auth0App.Callbacks.FirstOrDefault(),
+                app.EmailVerificationNotificationEndpoint, auth0App.Callbacks?.FirstOrDefault(),
                 app.SecretKey, app.ApplicationId);
         }
 
@@ -72,7 +72,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
 
             using var session = _documentStore.OpenAsyncSession();
             var (createdApp, createdAuth0App) = await _appManager.CreateApp(model.Name, model.NotificationEndpointUrl,
-                model.EmailVerificationNotificationEndpointUrl, model.AuthCallbackUrl, true, session, cancellationToken);
+                model.EmailVerificationNotificationEndpointUrl, model.AuthCallbackUrl, model.Description, model.LogoUrl, session, true, cancellationToken);
 
             await session.SaveChangesAsync(cancellationToken);
 
@@ -154,6 +154,38 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
             return Ok();
         }
 
+        [HttpPatch("{applicationId}/set-description")]
+        public async Task<IActionResult> SetDescription([FromHeader(Name = "admin-key")] Guid adminKey,
+            string applicationId, [FromBody] AppDescriptionUpdateModel model, CancellationToken cancellationToken)
+        {
+            if (!_options.AdminKeys.Contains(adminKey))
+            {
+                return Unauthorized();
+            }
+
+            using var session = _documentStore.OpenAsyncSession();
+            await _appManager.SetDescription(applicationId, model.Description, session,
+                cancellationToken);
+            await session.SaveChangesAsync(cancellationToken);
+            return Ok();
+        }
+
+        [HttpPatch("{applicationId}/set-logourl")]
+        public async Task<IActionResult> SetLogoUrl([FromHeader(Name = "admin-key")] Guid adminKey,
+            string applicationId, [FromBody] AppLogoUrlUpdateModel model, CancellationToken cancellationToken)
+        {
+            if (!_options.AdminKeys.Contains(adminKey))
+            {
+                return Unauthorized();
+            }
+
+            using var session = _documentStore.OpenAsyncSession();
+            await _appManager.SetLogoUrl(applicationId, model.LogoUrl, session,
+                cancellationToken);
+            await session.SaveChangesAsync(cancellationToken);
+            return Ok();
+        }
+
         [HttpPatch("{applicationId}/rotate-secret")]
         public async Task<IActionResult> RotateSecret([FromHeader(Name = "admin-key")] Guid adminKey,
             string applicationId, CancellationToken cancellationToken)
@@ -167,6 +199,56 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
             await _appManager.RotateSecret(applicationId, session, cancellationToken);
             await session.SaveChangesAsync(cancellationToken);
             return Ok();
+        }
+
+        /// <summary>
+        /// Set application to active.
+        /// </summary>
+        /// <param name="adminKey">The admin key</param>
+        /// <param name="applicationId">The application id</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        [HttpPatch("{applicationId}/activate")]
+        public async Task<ActionResult> ActivateApplication([FromHeader(Name = "admin-key")] Guid adminKey,
+            string applicationId, CancellationToken cancellationToken)
+        {
+            if (!_options.AdminKeys.Contains(adminKey))
+            {
+                return Unauthorized();
+            }
+
+            using var session = _documentStore.OpenAsyncSession();
+            var app = await _appManager.GetAppFromApplicationId(applicationId, session, cancellationToken);
+            app.IsInactive = false;
+
+            await session.SaveChangesAsync(cancellationToken);
+
+            return Ok("Application set to active");
+        }
+
+        /// <summary>
+        /// Set application to inactive
+        /// </summary>
+        /// <param name="adminKey">The admin key</param>
+        /// <param name="applicationId">The application id</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        [HttpPatch("{applicationId}/deactivate")]
+        public async Task<ActionResult> DeactivateApplication([FromHeader(Name = "admin-key")] Guid adminKey,
+            string applicationId, CancellationToken cancellationToken)
+        {
+            if (!_options.AdminKeys.Contains(adminKey))
+            {
+                return Unauthorized();
+            }
+
+            using var session = _documentStore.OpenAsyncSession();
+            var app = await _appManager.GetAppFromApplicationId(applicationId, session, cancellationToken);
+            app.IsInactive = true;
+
+            await session.SaveChangesAsync(cancellationToken);
+
+            return Ok("Application set to inactive");
         }
     }
 
@@ -199,6 +281,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
         public string NotificationEndpointUrl { get; set; }
         public string EmailVerificationNotificationEndpointUrl { get; set; }
         public string AuthCallbackUrl { get; set; }
+        public string Description { get; set; }
+        public string LogoUrl { get; set; }
     }
 
     public class AppEndpointUpdateModel
@@ -210,5 +294,15 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
     {
         [Required]
         public string Name { get; set; }
+    }
+
+    public class AppDescriptionUpdateModel
+    {
+        public string Description { get; set; }
+    }
+
+    public class AppLogoUrlUpdateModel
+    {
+        public string LogoUrl { get; set; }
     }
 }

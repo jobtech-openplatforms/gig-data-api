@@ -9,13 +9,15 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
         }
 
         public App(string name, string secretKey, string applicationId, string notificationEndpoint,
-            string emailVerificationNotificationEndpoint, bool isInactive) : this()
+            string emailVerificationNotificationEndpoint, string description, string logoUrl, bool isInactive = false) : this()
         {
             Name = name;
             SecretKey = secretKey;
             ApplicationId = applicationId;
             NotificationEndpoint = notificationEndpoint;
             EmailVerificationNotificationEndpoint = emailVerificationNotificationEndpoint;
+            Description = description;
+            LogoUrl = logoUrl;
             IsInactive = isInactive;
         }
 
@@ -25,5 +27,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
         public string SecretKey { get; set; }
         public string ApplicationId { get; private set; }
         public bool IsInactive { get; set; }
+        public string Description { get; set; }
+        public string LogoUrl { get; set; }
     }
 }
