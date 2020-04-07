@@ -391,7 +391,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                 foreach (var connectionInfoNotificationInfo in platformConnection.ConnectionInfo.NotificationInfos)
                 {
                     var app = apps.Single(a => a.Id == connectionInfoNotificationInfo.AppId);
-                    var appUserConnectionViewModel = Apps.SingleOrDefault(aucvm => aucvm.AppId == app.Id);
+                    var appUserConnectionViewModel = Apps.SingleOrDefault(aucvm => aucvm.ApplicationId == app.ApplicationId);
                     if (appUserConnectionViewModel == null)
                     {
                         Apps.Add(new AppUserConnectionViewModel(app.Name, app.ApplicationId,
@@ -450,15 +450,15 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
     public class AppUserConnectionViewModel
     {
-        public AppUserConnectionViewModel(string name, string appId, IList<Guid> connectedPlatforms)
+        public AppUserConnectionViewModel(string name, string applicationId, IList<Guid> connectedPlatforms)
         {
             Name = name;
-            AppId = appId;
+            ApplicationId = applicationId;
             ConnectedPlatforms = connectedPlatforms;
         }
 
         public string Name { get; private set; }
-        public string AppId { get; private set; }
+        public string ApplicationId { get; private set; }
         public IList<Guid> ConnectedPlatforms { get; private set; }
     }
 }

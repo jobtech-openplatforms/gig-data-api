@@ -48,7 +48,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
 
             return new AppInfoViewModel(app.Name, app.NotificationEndpoint,
                 app.EmailVerificationNotificationEndpoint, auth0App.Callbacks?.FirstOrDefault(),
-                app.SecretKey, app.ApplicationId);
+                app.SecretKey, app.ApplicationId, app.WebsiteUrl);
         }
 
         /// <summary>
@@ -74,7 +74,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
 
             return new AppInfoViewModel(createdApp.Name, createdApp.NotificationEndpoint,
                 createdApp.EmailVerificationNotificationEndpoint, createdAuth0App.Callbacks?.FirstOrDefault(),
-                createdApp.SecretKey, createdApp.ApplicationId);
+                createdApp.SecretKey, createdApp.ApplicationId, createdApp.WebsiteUrl);
         }
 
         /// <summary>
@@ -294,7 +294,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
     {
         public AppInfoViewModel(string name, string notificationEndpointUrl,
             string emailVerificationNotificationEndpointUrl, string authCallbackUrl, string secretKey,
-            string applicationId)
+            string applicationId, string websiteUrl)
         {
             Name = name;
             NotificationEndpointUrl = notificationEndpointUrl;
@@ -302,6 +302,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
             AuthCallbackUrl = authCallbackUrl;
             SecretKey = secretKey;
             ApplicationId = applicationId;
+            WebsiteUrl = websiteUrl;
         }
 
         public string Name { get; private set; }
@@ -310,6 +311,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
         public string AuthCallbackUrl { get; private set; }
         public string SecretKey { get; private set; }
         public string ApplicationId { get; private set; }
+        public string WebsiteUrl { get; private set; }
     }
 
     public class AppSecretViewModel

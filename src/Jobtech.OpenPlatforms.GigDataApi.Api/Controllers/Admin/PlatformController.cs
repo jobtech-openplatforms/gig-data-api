@@ -57,7 +57,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
             await session.SaveChangesAsync(cancellationToken);
 
             return new PlatformInfoViewModel(createdPlatform.ExternalId, createdPlatform.Name,
-                createdPlatform.Description, createdPlatform.LogoUrl, createdPlatform.IsInactive,
+                createdPlatform.Description, createdPlatform.LogoUrl, createdPlatform.WebsiteUrl,
+                createdPlatform.IsInactive,
                 createdPlatform.AuthenticationMechanism);
         }
 
@@ -79,6 +80,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
             using var session = _documentStore.OpenAsyncSession();
             var platform = await _platformManager.GetPlatformByExternalId(platformId, session, cancellationToken);
             return new PlatformInfoViewModel(platform.ExternalId, platform.Name, platform.Description, platform.LogoUrl,
+                platform.WebsiteUrl,
                 platform.IsInactive, platform.AuthenticationMechanism);
         }
 
@@ -228,8 +230,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
     public class PlatformInfoViewModel : PlatformViewModel
     {
         public PlatformInfoViewModel(Guid externalPlatformId, string name, string description, string logoUrl,
+            string websiteUrl,
             bool isInactive, PlatformAuthenticationMechanism authMechanism) : base(externalPlatformId, name,
-            description, logoUrl, authMechanism)
+            description, logoUrl, websiteUrl, authMechanism)
         {
             IsInactive = isInactive;
         }
