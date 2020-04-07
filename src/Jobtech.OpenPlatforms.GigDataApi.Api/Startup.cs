@@ -6,6 +6,7 @@ using System.Net;
 using System.Reflection;
 using System.Security.Authentication;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Api.Exceptions;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
@@ -245,7 +246,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
             {
                 AppDoesNotExistException _ => HttpStatusCode.NotFound,
                 PlatformDoNotExistException _ => HttpStatusCode.NotFound,
-                AuthenticationException _ => HttpStatusCode.Unauthorized,
+                UnauthorizedAdminCallException _ => HttpStatusCode.Unauthorized,
                 _ => HttpStatusCode.InternalServerError
             };
 

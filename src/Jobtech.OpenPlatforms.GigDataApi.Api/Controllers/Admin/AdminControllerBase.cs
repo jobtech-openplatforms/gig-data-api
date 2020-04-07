@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Security.Authentication;
+using Jobtech.OpenPlatforms.GigDataApi.Api.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -18,7 +18,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
         {
             if (!_options.AdminKeys.Contains(adminKey))
             {
-                throw new AuthenticationException();
+                throw new UnauthorizedAdminCallException("Call was made with unrecognized admin key");
             }
         }
     }

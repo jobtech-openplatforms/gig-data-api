@@ -65,6 +65,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpGet("{platformId}/connection-status")]
+        [Produces("application/json")]
         public async Task<ActionResult<PlatformUserConnectionInfoViewModel>> GetPlatformUserConnectionStatus(
             Guid platformId, CancellationToken cancellationToken)
         {
@@ -94,6 +95,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpGet("connection-status")]
+        [Produces("application/json")]
         public async Task<ActionResult<IEnumerable<PlatformUserConnectionInfoViewModel>>>
             GetPlatformUserConnectionInfos(CancellationToken cancellationToken)
         {
@@ -124,6 +126,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpGet("connection-state")]
+        [Produces("application/json")]
         public async Task<ActionResult<PlatformUserConnectionStateViewModel>> GetUserPlatformConnectionState(
             CancellationToken cancellationToken)
         {
@@ -150,6 +153,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpPost("connection-state")]
+        [Produces("application/json")]
         public async Task<ActionResult<PlatformUserConnectionStateViewModel>> UpdateUserPlatformConnectionState(
             [FromBody, Required] UserPlatformConnectionStateUpdateModel model, CancellationToken cancellationToken)
         {
@@ -270,7 +274,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpPost("{platformId}/initiate-data-fetch")]
-        public async Task<ActionResult> InitiateDataFetch(Guid platformId,
+        public async Task<IActionResult> InitiateDataFetch(Guid platformId,
             [FromBody, Required] InitiateDataFetchModel model, CancellationToken cancellationToken)
         {
             var uniqueUserIdentifier = _httpContextAccessor.HttpContext.User.Identity.Name;
@@ -293,12 +297,32 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         }
 
         /// <summary>
+        /// Get info for the platform with the given id.
+        /// </summary>
+        /// <param name="platformId">The platform id.</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        [AllowAnonymous]
+        [HttpGet("{platformId}")]
+        [Produces("application/json")]
+        public async Task<ActionResult<PlatformViewModel>> GetPlatformInfo(Guid platformId,
+            CancellationToken cancellationToken)
+        {
+            using var session = _documentStore.OpenAsyncSession();
+            var platform = await _platformManager.GetPlatformByExternalId(platformId, session, cancellationToken);
+
+            return new PlatformViewModel(platform.ExternalId, platform.Name, platform.Description, platform.LogoUrl,
+                platform.AuthenticationMechanism);
+        }
+
+        /// <summary>
         /// Get a list of all available platforms.
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [AllowAnonymous]
         [HttpGet("available")]
+        [Produces("application/json")]
         public async Task<ActionResult<IEnumerable<PlatformViewModel>>> GetAllAvailablePlatforms(
             CancellationToken cancellationToken)
         {
@@ -339,33 +363,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         public IEnumerable<string> ConnectedApps { get; set; }
     }
 
-    public class CreatePlatformModel
-    {
-        [Required] public string Name { get; set; }
-
-        [Required, JsonConverter(typeof(JsonStringEnumConverter))]
-        public PlatformAuthenticationMechanism AuthMechanism { get; set; }
-
-        [Required] public decimal MinRating { get; set; }
-        [Required] public decimal MaxRating { get; set; }
-        [Required] public decimal RatingSuccessLimit { get; set; }
-        public string Description { get; set; }
-        public string LogoUrl { get; set; }
-    }
-
     public class InitiateDataFetchModel
     {
         public string ReportUri { get; set; }
-    }
-
-    public class SetLogoUrlModel
-    {
-        [Required, MaxLength(1024)] public string LogoUrl { get; set; }
-    }
-
-    public class SetDescriptionModel
-    {
-        [Required, MaxLength(1024)] public string Description { get; set; }
     }
 
     public class PlatformUserConnectionStateViewModel

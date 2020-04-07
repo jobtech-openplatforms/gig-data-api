@@ -45,7 +45,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         [HttpPost("callback")]
         [ApiExplorerSettings(IgnoreApi = true)]
         [AllowAnonymous]
-        public async Task<ActionResult> PromptCallback([FromQuery(Name = "prompt_id")] string promptId,
+        public async Task<IActionResult> PromptCallback([FromQuery(Name = "prompt_id")] string promptId,
             CancellationToken cancellationToken)
         {
             using var session = _documentStore.OpenAsyncSession();
@@ -109,6 +109,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpPost("validate-email")]
+        [Produces("application/json")]
         public async Task<ActionResult<UserEmailState>> ValidateEmail(ValidateEmailModel model,
             CancellationToken cancellationToken)
         {

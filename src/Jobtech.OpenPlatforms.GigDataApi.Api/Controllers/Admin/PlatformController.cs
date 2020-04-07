@@ -1,4 +1,6 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Core;
@@ -20,14 +22,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
     {
         private readonly IPlatformManager _platformManager;
         private readonly IDocumentStore _documentStore;
-        private readonly Options _options;
 
         public PlatformController(IPlatformManager platformManager, IDocumentStore documentStore,
-            IOptions<Options> options): base(options)
+            IOptions<Options> options) : base(options)
         {
             _platformManager = platformManager;
             _documentStore = documentStore;
-            _options = options.Value;
         }
 
 
@@ -40,25 +40,25 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
         /// <returns></returns>
         [AllowAnonymous]
         [HttpPost]
+        [Produces("application/json")]
         public async Task<ActionResult<PlatformInfoViewModel>> CreatePlatform(
             [FromHeader(Name = "admin-key")] Guid adminKey, [FromBody] CreatePlatformModel model,
             CancellationToken cancellationToken)
         {
-            if (!_options.AdminKeys.Contains(adminKey))
-            {
-                return Unauthorized();
-            }
+            ValidateAdminKey(adminKey);
 
             using var session = _documentStore.OpenAsyncSession();
             var createdPlatform = await _platformManager.CreatePlatform(model.Name, model.AuthMechanism,
                 PlatformIntegrationType.GigDataPlatformIntegration,
                 new RatingInfo(model.MinRating, model.MaxRating, model.RatingSuccessLimit),
-                3600, Guid.NewGuid(), model.Description, model.LogoUrl, session, true, cancellationToken);
+                3600, Guid.NewGuid(), model.Description, model.LogoUrl, model.WebsiteUrl, session, true,
+                cancellationToken);
 
             await session.SaveChangesAsync(cancellationToken);
 
             return new PlatformInfoViewModel(createdPlatform.ExternalId, createdPlatform.Name,
-                createdPlatform.Description, createdPlatform.LogoUrl, createdPlatform.IsInactive, createdPlatform.AuthenticationMechanism);
+                createdPlatform.Description, createdPlatform.LogoUrl, createdPlatform.IsInactive,
+                createdPlatform.AuthenticationMechanism);
         }
 
         /// <summary>
@@ -70,15 +70,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
         /// <returns></returns>
         [AllowAnonymous]
         [HttpGet("{platformId}")]
+        [Produces("application/json")]
         public async Task<ActionResult<PlatformInfoViewModel>> GetPlatformInfo(
             [FromHeader(Name = "admin-key")] Guid adminKey, Guid platformId, CancellationToken cancellationToken)
         {
-            if (!_options.AdminKeys.Contains(adminKey))
-            {
-                return Unauthorized();
-            }
-
-            //ValidateAdminKey(adminKey);
+            ValidateAdminKey(adminKey);
 
             using var session = _documentStore.OpenAsyncSession();
             var platform = await _platformManager.GetPlatformByExternalId(platformId, session, cancellationToken);
@@ -98,10 +94,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
         public async Task<ActionResult> ActivatePlatform([FromHeader(Name = "admin-key")] Guid adminKey,
             Guid platformId, CancellationToken cancellationToken)
         {
-            if (!_options.AdminKeys.Contains(adminKey))
-            {
-                return Unauthorized();
-            }
+            ValidateAdminKey(adminKey);
 
             using var session = _documentStore.OpenAsyncSession();
             var platform = await _platformManager.GetPlatformByExternalId(platformId, session, cancellationToken);
@@ -124,10 +117,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
         public async Task<ActionResult> DeactivatePlatform([FromHeader(Name = "admin-key")] Guid adminKey,
             Guid platformId, CancellationToken cancellationToken)
         {
-            if (!_options.AdminKeys.Contains(adminKey))
-            {
-                return Unauthorized();
-            }
+            ValidateAdminKey(adminKey);
 
             using var session = _documentStore.OpenAsyncSession();
             var platform = await _platformManager.GetPlatformByExternalId(platformId, session, cancellationToken);
@@ -136,6 +126,30 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
             await session.SaveChangesAsync(cancellationToken);
 
             return Ok("Platform set to inactive");
+        }
+
+        /// <summary>
+        /// Set the name for a platform
+        /// </summary>
+        /// <param name="adminKey">The admin key</param>
+        /// <param name="platformId">The platform id</param>
+        /// <param name="model">Logo name data</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        [AllowAnonymous]
+        [HttpPatch("{platformId}/set-name")]
+        public async Task<ActionResult> SetName([FromHeader(Name = "admin-key")] Guid adminKey, Guid platformId,
+            [FromBody] SetNameModel model, CancellationToken cancellationToken)
+        {
+            ValidateAdminKey(adminKey);
+
+            using var session = _documentStore.OpenAsyncSession();
+            var platform = await _platformManager.GetPlatformByExternalId(platformId, session, cancellationToken);
+            platform.Name = model.Name;
+
+            await session.SaveChangesAsync(cancellationToken);
+
+            return Ok("Platform name updated");
         }
 
         /// <summary>
@@ -151,10 +165,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
         public async Task<ActionResult> SetLogoUrl([FromHeader(Name = "admin-key")] Guid adminKey, Guid platformId,
             [FromBody] SetLogoUrlModel model, CancellationToken cancellationToken)
         {
-            if (!_options.AdminKeys.Contains(adminKey))
-            {
-                return Unauthorized();
-            }
+            ValidateAdminKey(adminKey);
 
             using var session = _documentStore.OpenAsyncSession();
             var platform = await _platformManager.GetPlatformByExternalId(platformId, session, cancellationToken);
@@ -178,10 +189,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
         public async Task<ActionResult> SetDescription([FromHeader(Name = "admin-key")] Guid adminKey, Guid platformId,
             [FromBody] SetDescriptionModel model, CancellationToken cancellationToken)
         {
-            if (!_options.AdminKeys.Contains(adminKey))
-            {
-                return Unauthorized();
-            }
+            ValidateAdminKey(adminKey);
 
             using var session = _documentStore.OpenAsyncSession();
             var platform = await _platformManager.GetPlatformByExternalId(platformId, session, cancellationToken);
@@ -190,6 +198,30 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
             await session.SaveChangesAsync(cancellationToken);
 
             return Ok("Platform logo url updated");
+        }
+
+        /// <summary>
+        /// Set the website url for a platform
+        /// </summary>
+        /// <param name="adminKey">The admin key</param>
+        /// <param name="platformId">The platform id</param>
+        /// <param name="model">The website url data</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        [AllowAnonymous]
+        [HttpPatch("{platformId}/set-websiteurl")]
+        public async Task<ActionResult> SetWebsiteUrl([FromHeader(Name = "admin-key")] Guid adminKey, Guid platformId,
+            [FromBody] SetWebsiteUrlModel model, CancellationToken cancellationToken)
+        {
+            ValidateAdminKey(adminKey);
+
+            using var session = _documentStore.OpenAsyncSession();
+            var platform = await _platformManager.GetPlatformByExternalId(platformId, session, cancellationToken);
+            platform.WebsiteUrl = model.WebsiteUrl;
+
+            await session.SaveChangesAsync(cancellationToken);
+
+            return Ok("Platform website url updated");
         }
     }
 
@@ -203,5 +235,40 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
         }
 
         public bool IsInactive { get; set; }
+    }
+
+    public class CreatePlatformModel
+    {
+        [Required, MaxLength(1024)] public string Name { get; set; }
+
+        [Required, JsonConverter(typeof(JsonStringEnumConverter))]
+        public PlatformAuthenticationMechanism AuthMechanism { get; set; }
+
+        [Required] public decimal MinRating { get; set; }
+        [Required] public decimal MaxRating { get; set; }
+        [Required] public decimal RatingSuccessLimit { get; set; }
+        [MaxLength(1024)] public string Description { get; set; }
+        [MaxLength(2048)] public string LogoUrl { get; set; }
+        [MaxLength(2048)] public string WebsiteUrl { get; set; }
+    }
+
+    public class SetLogoUrlModel
+    {
+        [MaxLength(2048)] public string LogoUrl { get; set; }
+    }
+
+    public class SetNameModel
+    {
+        [Required, MaxLength(1024)] public string Name { get; set; }
+    }
+
+    public class SetDescriptionModel
+    {
+        [MaxLength(1024)] public string Description { get; set; }
+    }
+
+    public class SetWebsiteUrlModel
+    {
+        [MaxLength(2048)] public string WebsiteUrl { get; set; }
     }
 }

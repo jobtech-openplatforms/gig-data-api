@@ -17,7 +17,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         Task<Platform> CreatePlatform(string name,
             PlatformAuthenticationMechanism authMechanism, PlatformIntegrationType platformIntegrationType,
             RatingInfo ratingInfo, int? dataPollIntervalInSeconds, Guid externalPlatformId, string description,
-            string logoUrl, IAsyncDocumentSession session, bool isInactive = false,
+            string logoUrl, string websiteUrl, IAsyncDocumentSession session, bool isInactive = false,
             CancellationToken cancellationToken = default);
 
         Task<Platform> GetPlatform(string platformId, IAsyncDocumentSession session,
@@ -40,7 +40,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         public async Task<Platform> CreatePlatform(string name,
             PlatformAuthenticationMechanism authMechanism, PlatformIntegrationType platformIntegrationType,
             RatingInfo ratingInfo, int? dataPollIntervalInSeconds, Guid externalPlatformId, string description,
-            string logoUrl, IAsyncDocumentSession session, bool isInactive = false,
+            string logoUrl, string websiteUrl, IAsyncDocumentSession session, bool isInactive = false,
             CancellationToken cancellationToken = default)
         {
             try
@@ -52,7 +52,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             catch (PlatformDoNotExistException)
             {
                 var platform = new Platform(name, externalPlatformId, authMechanism, platformIntegrationType,
-                    ratingInfo, description, logoUrl, dataPollIntervalInSeconds, isInactive);
+                    ratingInfo, description, logoUrl, websiteUrl, dataPollIntervalInSeconds, isInactive);
                 await session.StoreAsync(platform, cancellationToken);
                 return platform;
             }

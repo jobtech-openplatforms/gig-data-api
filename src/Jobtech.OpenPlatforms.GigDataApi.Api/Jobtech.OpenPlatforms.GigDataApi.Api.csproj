@@ -34,8 +34,4 @@
     <ProjectReference Include="..\Jobtech.OpenPlatforms.GigDataApi.Engine\Jobtech.OpenPlatforms.GigDataApi.Engine.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Exceptions\" />
-  </ItemGroup>
-
 </Project>

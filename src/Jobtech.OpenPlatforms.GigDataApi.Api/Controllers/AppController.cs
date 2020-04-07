@@ -11,6 +11,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class AppController : ControllerBase
     {
         private readonly IAppManager _appManager;
@@ -24,6 +25,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
         [HttpGet("{applicationId}")]
         [AllowAnonymous]
+        [Produces("application/json")]
         public async Task<AppViewModel> GetAppInfo(string applicationId, CancellationToken cancellationToken)
         {
             using var session = _documentStore.OpenAsyncSession();
@@ -33,6 +35,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
         [HttpGet("available")]
         [AllowAnonymous]
+        [Produces("application/json")]
         public async Task<IList<AppViewModel>> GetAppInfos(CancellationToken cancellationToken, [FromQuery] int page = 0, [FromQuery] int pageSize = 20)
         {
             using var session = _documentStore.OpenAsyncSession();

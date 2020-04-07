@@ -47,6 +47,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
         [HttpGet("mobile-bank-id-authorization-url/{applicationId}")]
         [AllowAnonymous]
+        [Produces("application/json")]
         public async Task<ActionResult<AuthEndpointInfoViewModel>> GetMobileBankIdAuthorizationUrl(string applicationId,
             [FromQuery] string redirectUrl, CancellationToken cancellationToken)
         {
@@ -56,6 +57,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
         [HttpGet("username-password-authorization-url/{applicationId}")]
         [AllowAnonymous]
+        [Produces("application/json")]
         public async Task<ActionResult<AuthEndpointInfoViewModel>> GetUsernamePasswordAuthorizationUrl(
             string applicationId, [FromQuery] string redirectUrl, CancellationToken cancellationToken)
         {
@@ -96,7 +98,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
         [HttpPost("add-validated-email-address")]
         [AllowAnonymous]
-        public async Task AddValidatedEmailAddress([FromHeader(Name = "app_secret")] string appSecret,
+        public async Task<IActionResult> AddValidatedEmailAddress([FromHeader(Name = "app_secret")] string appSecret,
             [FromBody] ValidatedEmailModel model, CancellationToken cancellationToken)
         {
             using var session = _documentStore.OpenAsyncSession();
@@ -125,9 +127,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             }
 
             await session.SaveChangesAsync(cancellationToken);
+
+            return Ok("Email address added");
         }
 
         [HttpGet]
+        [Produces("application/json")]
         public async Task<ActionResult<UserViewModel>> GetUser(CancellationToken cancellationToken)
         {
             var uniqueUserId = _httpContextAccessor.HttpContext.User.Identity.Name;

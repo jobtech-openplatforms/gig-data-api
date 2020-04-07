@@ -9,8 +9,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
         {
         }
 
-        public Platform(string name, Guid externalId, PlatformAuthenticationMechanism authMechanism, 
-            PlatformIntegrationType integrationType, RatingInfo ratingInfo, string description, string logoUrl, int? dataPollIntervalInSeconds = null, bool isInactive = false): this()
+        public Platform(string name, Guid externalId, PlatformAuthenticationMechanism authMechanism,
+            PlatformIntegrationType integrationType, RatingInfo ratingInfo, string description, string logoUrl,
+            string websiteUrl, int? dataPollIntervalInSeconds = null, bool isInactive = false) : this()
         {
             Name = name;
             ExternalId = externalId;
@@ -19,11 +20,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
             RatingInfo = ratingInfo;
             Description = description;
             LogoUrl = logoUrl;
+            WebsiteUrl = websiteUrl;
             DataPollIntervalInSeconds = dataPollIntervalInSeconds;
             IsInactive = isInactive;
         }
 
-        public string Name { get; private set; }
+        public string Name { get; set; }
         public Guid ExternalId { get; private set; }
         public PlatformIntegrationType IntegrationType { get; private set; }
         public PlatformAuthenticationMechanism AuthenticationMechanism { get; private set; }
@@ -32,6 +34,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
         public bool IsInactive { get; set; }
         public string Description { get; set; }
         public string LogoUrl { get; set; }
+        public string WebsiteUrl { get; set; }
     }
 
     public class RatingInfo

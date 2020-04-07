@@ -45,6 +45,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         }
 
         [HttpPost("start-connect-user-to-oauth-platform")]
+        [Produces("application/json")]
         public async Task<StartPlatformOauthConnectionResultViewModel> StartConnectUserToOauthPlatform(
             StartPlatformConnectionOauthModel model, CancellationToken cancellationToken)
         {
@@ -67,7 +68,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         }
 
         [HttpPost("request-platform-data-update-notification")]
-        public async Task<ActionResult> RequestPlatformDataUpdateNotification(PlatformDataUpdateRequestModel model,
+        public async Task<IActionResult> RequestPlatformDataUpdateNotification(PlatformDataUpdateRequestModel model,
             CancellationToken cancellationToken)
         {
             var uniqueUserIdentifier = _httpContextAccessor.HttpContext.User.Identity.Name;
@@ -98,6 +99,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         }
 
         [HttpPost("connect-user-to-email-platform")]
+        [Produces("application/json")]
         public async Task<PlatformConnectionResultViewModel> ConnectUserToEmailPlatform(
             StartPlatformConnectionEmailModel model, CancellationToken cancellationToken)
         {
