@@ -1,194 +1,57 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 {
-    //[ApiExplorerSettings(IgnoreApi = true)]
     [Route("api/[controller]")]
     [ApiController]
     public class AppController : ControllerBase
     {
         private readonly IAppManager _appManager;
         private readonly IDocumentStore _documentStore;
-        private readonly Options _options;
 
-        public AppController(IAppManager appManager, IDocumentStore documentStore, IOptions<Options> options)
+        public AppController(IAppManager appManager, IDocumentStore documentStore)
         {
             _appManager = appManager;
             _documentStore = documentStore;
-            _options = options.Value;
         }
 
-        [HttpGet("admin/{applicationId}")]
-        public async Task<ActionResult<AppInfoViewModel>> GetAppInfo([FromHeader(Name = "admin-key")] Guid adminKey,
-            string applicationId, CancellationToken cancellationToken)
+        [HttpGet("{applicationId}")]
+        [AllowAnonymous]
+        public async Task<AppViewModel> GetAppInfo(string applicationId, CancellationToken cancellationToken)
         {
-            if (!_options.AdminKeys.Contains(adminKey))
-            {
-                return Unauthorized();
-            }
-
             using var session = _documentStore.OpenAsyncSession();
-
-            var (app, auth0App) =
-                await _appManager.GetAppInfoFromApplicationId(applicationId, session, cancellationToken);
-
-            return new AppInfoViewModel(app.Name, app.NotificationEndpoint,
-                app.EmailVerificationNotificationEndpoint, auth0App.Callbacks.FirstOrDefault(),
-                app.SecretKey, app.ApplicationId);
+            var app = await _appManager.GetAppFromApplicationId(applicationId, session, cancellationToken);
+            return new AppViewModel(app.Name, app.ApplicationId);
         }
 
-        [HttpPost("admin/create")]
-        public async Task<ActionResult<AppInfoViewModel>> CreateApp([FromHeader(Name = "admin-key")] Guid adminKey,
-            [FromBody] AppCreateModel model, CancellationToken cancellationToken)
+        [HttpGet("available")]
+        [AllowAnonymous]
+        public async Task<IList<AppViewModel>> GetAppInfos(CancellationToken cancellationToken, [FromQuery] int page = 0, [FromQuery] int pageSize = 20)
         {
-            if (!_options.AdminKeys.Contains(adminKey))
-            {
-                return Unauthorized();
-            }
-
             using var session = _documentStore.OpenAsyncSession();
-            var (createdApp, createdAuth0App) = await _appManager.CreateApp(model.Name, model.NotificationEndpointUrl,
-                model.EmailVerificationNotificationEndpointUrl, model.AuthCallbackUrl, session, cancellationToken);
-
-            await session.SaveChangesAsync(cancellationToken);
-
-            return new AppInfoViewModel(createdApp.Name, createdApp.NotificationEndpoint,
-                createdApp.EmailVerificationNotificationEndpoint, createdAuth0App.Callbacks?.FirstOrDefault(),
-                createdApp.SecretKey, createdApp.ApplicationId);
+            var apps = await _appManager.GetAllActiveApps(page, pageSize, session, cancellationToken);
+            return apps.Select(a => new AppViewModel(a.Name, a.ApplicationId)).ToList();
         }
 
-        [HttpPatch("admin/set-notification-endpoint-url")]
-        public async Task<IActionResult> SetNotificationEndpointUrl([FromHeader(Name = "admin-key")] Guid adminKey,
-            [FromBody] AppEndpointUpdateModel model, CancellationToken cancellationToken)
-        {
-            if (!_options.AdminKeys.Contains(adminKey))
-            {
-                return Unauthorized();
-            }
 
-            using var session = _documentStore.OpenAsyncSession();
-            await _appManager.SetNotificationEndpointUrl(model.ApplicationId, model.Url, session,
-                cancellationToken);
-            await session.SaveChangesAsync(cancellationToken);
-            return Ok();
-        }
-
-        [HttpPatch("admin/set-email-verification-notification-endpoint-url")]
-        public async Task<IActionResult> SetEmailVerificationNotificationEndpointUrl(
-            [FromHeader(Name = "admin-key")] Guid adminKey, [FromBody] AppEndpointUpdateModel model,
-            CancellationToken cancellationToken)
-        {
-            if (!_options.AdminKeys.Contains(adminKey))
-            {
-                return Unauthorized();
-            }
-
-            using var session = _documentStore.OpenAsyncSession();
-            await _appManager.SetEmailVerificationNotificationEndpointUrl(model.ApplicationId, model.Url, session,
-                cancellationToken);
-            await session.SaveChangesAsync(cancellationToken);
-            return Ok();
-        }
-
-        [HttpPatch("admin/set-auth-callback-url")]
-        public async Task<IActionResult> SetAuthCallbackUrl([FromHeader(Name = "admin-key")] Guid adminKey,
-            [FromBody] AppEndpointUpdateModel model, CancellationToken cancellationToken)
-        {
-            if (!_options.AdminKeys.Contains(adminKey))
-            {
-                return Unauthorized();
-            }
-
-            using var session = _documentStore.OpenAsyncSession();
-            await _appManager.SetCallbackUrl(model.ApplicationId, model.Url, session,
-                cancellationToken);
-            await session.SaveChangesAsync(cancellationToken);
-            return Ok();
-        }
-
-        [HttpPatch("admin/set-name")]
-        public async Task<IActionResult> SetName([FromHeader(Name = "admin-key")] Guid adminKey,
-            [FromBody] AppNameUpdateModel model, CancellationToken cancellationToken)
-        {
-            if (!_options.AdminKeys.Contains(adminKey))
-            {
-                return Unauthorized();
-            }
-
-            using var session = _documentStore.OpenAsyncSession();
-            await _appManager.SetName(model.ApplicationId, model.Name, session,
-                cancellationToken);
-            await session.SaveChangesAsync(cancellationToken);
-            return Ok();
-        }
-
-        [HttpPatch("admin/{applicationId}/rotate-secret")]
-        public async Task<IActionResult> RotateSecret([FromHeader(Name = "admin-key")] Guid adminKey,
-            string applicationId, CancellationToken cancellationToken)
-        {
-            if (!_options.AdminKeys.Contains(adminKey))
-            {
-                return Unauthorized();
-            }
-
-            using var session = _documentStore.OpenAsyncSession();
-            await _appManager.RotateSecret(applicationId, session, cancellationToken);
-            await session.SaveChangesAsync(cancellationToken);
-            return Ok();
-        }
     }
 
-    public class AppInfoViewModel
+    public class AppViewModel
     {
-        public AppInfoViewModel(string name, string notificationEndpointUrl,
-            string emailVerificationNotificationEndpointUrl, string authCallbackUrl, string secretKey,
-            string applicationId)
+        public AppViewModel(string name, string applicationId)
         {
             Name = name;
-            NotificationEndpointUrl = notificationEndpointUrl;
-            EmailVerificationNotificationEndpointUrl = emailVerificationNotificationEndpointUrl;
-            AuthCallbackUrl = authCallbackUrl;
-            SecretKey = secretKey;
             ApplicationId = applicationId;
         }
 
-        public string Name { get; private set; }
-        public string NotificationEndpointUrl { get; private set; }
-        public string EmailVerificationNotificationEndpointUrl { get; private set; }
-        public string AuthCallbackUrl { get; private set; }
-        public string SecretKey { get; private set; }
         public string ApplicationId { get; private set; }
-    }
-
-    public class AppCreateModel
-    {
-        [Required]
-        public string Name { get; set; }
-        public string NotificationEndpointUrl { get; set; }
-        public string EmailVerificationNotificationEndpointUrl { get; set; }
-        public string AuthCallbackUrl { get; set; }
-    }
-
-    public class AppEndpointUpdateModel
-    {
-        [Required]
-        public string ApplicationId { get; set; }
-        public string Url { get; set; }
-    }
-
-    public class AppNameUpdateModel
-    {
-        [Required]
-        public string ApplicationId { get; set; }
-        [Required]
-        public string Name { get; set; }
+        public string Name { get; private set; }
     }
 }
