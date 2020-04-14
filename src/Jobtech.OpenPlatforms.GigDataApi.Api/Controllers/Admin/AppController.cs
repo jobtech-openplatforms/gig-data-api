@@ -18,12 +18,18 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
     public class AppController : AdminControllerBase
     {
         private readonly IAppManager _appManager;
+
+        private readonly IAuth0ManagementApiHttpClientDependentAppManager
+            _auth0ManagementApiHttpClientDependentAppManager;
         private readonly IDocumentStore _documentStore;
 
-        public AppController(IAppManager appManager, IDocumentStore documentStore, IOptions<Options> options) :
+        public AppController(IAppManager appManager,
+            IAuth0ManagementApiHttpClientDependentAppManager auth0ManagementApiHttpClientDependentAppManager,
+            IDocumentStore documentStore, IOptions<Options> options) :
             base(options)
         {
             _appManager = appManager;
+            _auth0ManagementApiHttpClientDependentAppManager = auth0ManagementApiHttpClientDependentAppManager;
             _documentStore = documentStore;
         }
 
@@ -44,7 +50,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
             using var session = _documentStore.OpenAsyncSession();
 
             var (app, auth0App) =
-                await _appManager.GetAppInfoFromApplicationId(applicationId, session, cancellationToken);
+                await _auth0ManagementApiHttpClientDependentAppManager.GetAppInfoFromApplicationId(applicationId, session, cancellationToken);
 
             return new AppInfoViewModel(app.Name, app.NotificationEndpoint,
                 app.EmailVerificationNotificationEndpoint, auth0App.Callbacks?.FirstOrDefault(),
@@ -66,7 +72,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
             ValidateAdminKey(adminKey);
 
             using var session = _documentStore.OpenAsyncSession();
-            var (createdApp, createdAuth0App) = await _appManager.CreateApp(model.Name, model.NotificationEndpointUrl,
+            var (createdApp, createdAuth0App) = await _auth0ManagementApiHttpClientDependentAppManager.CreateApp(model.Name, model.NotificationEndpointUrl,
                 model.EmailVerificationNotificationEndpointUrl, model.AuthCallbackUrl, model.Description, model.LogoUrl,
                 model.WebsiteUrl, session, true, cancellationToken);
 
@@ -135,7 +141,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
             ValidateAdminKey(adminKey);
 
             using var session = _documentStore.OpenAsyncSession();
-            await _appManager.SetCallbackUrl(applicationId, model.Url, session,
+            await _auth0ManagementApiHttpClientDependentAppManager.SetCallbackUrl(applicationId, model.Url, session,
                 cancellationToken);
             await session.SaveChangesAsync(cancellationToken);
             return Ok("Auth callback url updated");

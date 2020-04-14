@@ -16,6 +16,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.IoC
             collection.AddTransient<IUserManager, UserManager>();
             collection.AddTransient<IEmailValidatorManager, EmailValidatorManager>();
             collection.AddTransient<IAppManager, AppManager>();
+            collection
+                .AddTransient<IAuth0ManagementApiHttpClientDependentAppManager,
+                    Auth0ManagementsApiHttpClientDependentAppManager>();
             collection.AddTransient<IAppNotificationManager, AppNotificationManager>();
             collection.AddTransient<IPlatformDataManager, PlatformDataManager>();
 

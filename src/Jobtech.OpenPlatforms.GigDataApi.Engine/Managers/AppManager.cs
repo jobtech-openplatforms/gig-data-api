@@ -12,21 +12,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {
     public interface IAppManager
     {
-        Task<(App, Auth0App)> CreateApp(string name, string notificationEndpoint,
-            string emailVerificationNotificationEndpoint, string authCallbackUri,
-            string description, string logoUrl, string websiteUrl, IAsyncDocumentSession session,
-            bool isInactive = false,
-            CancellationToken cancellationToken = default);
-
-        Task<App> CreateApp(string name, string applicationId, string secretKey,
-            string notificationEndpoint,
-            string emailVerificationNotificationEndpoint, string description, string logoUrl, string websiteUrl,
-            IAsyncDocumentSession session, bool isInactive = false,
-            CancellationToken cancellationToken = default);
-
-        Task<(App, Auth0App)> GetAppInfoFromApplicationId(string applicationId, IAsyncDocumentSession session,
-            CancellationToken cancellationToken);
-
         Task<App> GetAppFromApplicationId(string applicationId, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default);
 
@@ -50,9 +35,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         Task SetEmailVerificationNotificationEndpointUrl(string applicationId, string url,
             IAsyncDocumentSession session, CancellationToken cancellationToken = default);
 
-        Task SetCallbackUrl(string applicationId, string url, IAsyncDocumentSession session,
-            CancellationToken cancellationToken = default);
-
         Task SetName(string applicationId, string name, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default);
 
@@ -69,13 +51,37 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             CancellationToken cancellationToken = default);
     }
 
-    public class AppManager : IAppManager
+    public interface IAuth0ManagementApiHttpClientDependentAppManager
+    {
+        Task<(App, Auth0App)> CreateApp(string name, string notificationEndpoint,
+            string emailVerificationNotificationEndpoint, string authCallbackUri,
+            string description, string logoUrl, string websiteUrl, IAsyncDocumentSession session,
+            bool isInactive = false,
+            CancellationToken cancellationToken = default);
+
+        Task<App> CreateApp(string name, string applicationId, string secretKey,
+            string notificationEndpoint,
+            string emailVerificationNotificationEndpoint, string description, string logoUrl, string websiteUrl,
+            IAsyncDocumentSession session, bool isInactive = false,
+            CancellationToken cancellationToken = default);
+
+        Task<(App, Auth0App)> GetAppInfoFromApplicationId(string applicationId, IAsyncDocumentSession session,
+            CancellationToken cancellationToken);
+
+        Task SetCallbackUrl(string applicationId, string url, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
+    }
+
+    public class Auth0ManagementsApiHttpClientDependentAppManager : IAuth0ManagementApiHttpClientDependentAppManager
     {
         private readonly Auth0ManagementApiHttpClient _httpClient;
+        private readonly IAppManager _appManager;
 
-        public AppManager(Auth0ManagementApiHttpClient httpClient)
+        public Auth0ManagementsApiHttpClientDependentAppManager(Auth0ManagementApiHttpClient httpClient,
+            IAppManager appManager)
         {
             _httpClient = httpClient;
+            _appManager = appManager;
         }
 
         public async Task<(App, Auth0App)> CreateApp(string name, string notificationEndpoint,
@@ -121,10 +127,24 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         public async Task<(App, Auth0App)> GetAppInfoFromApplicationId(string applicationId,
             IAsyncDocumentSession session, CancellationToken cancellationToken)
         {
-            var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
+            var app = await _appManager.GetAppFromApplicationId(applicationId, session, cancellationToken);
             var auth0App = await _httpClient.GetApp(applicationId, cancellationToken);
 
             return (app, auth0App);
+        }
+
+        public async Task SetCallbackUrl(string applicationId, string url, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
+        {
+            var app = await _appManager.GetAppFromApplicationId(applicationId, session, cancellationToken);
+            var _ = await _httpClient.UpdateCallbackUris(app.ApplicationId, url, cancellationToken);
+        }
+    }
+
+    public class AppManager : IAppManager
+    {
+        public AppManager()
+        {
         }
 
         public async Task<App> GetAppFromApplicationId(string applicationId, IAsyncDocumentSession session,
@@ -200,13 +220,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         {
             var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
             app.EmailVerificationNotificationEndpoint = string.IsNullOrWhiteSpace(url) ? null : url;
-        }
-
-        public async Task SetCallbackUrl(string applicationId, string url, IAsyncDocumentSession session,
-            CancellationToken cancellationToken = default)
-        {
-            var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
-            var _ = await _httpClient.UpdateCallbackUris(app.ApplicationId, url, cancellationToken);
         }
 
         public async Task SetName(string applicationId, string name, IAsyncDocumentSession session,
