@@ -111,17 +111,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                         })
                         .Logging(l => l.Serilog())
                         .Routing(r => r.TypeBased()
-                            .Map<PlatformConnectionUpdateNotificationMessage>("platformconnection.update")).Serialization(
-                            s =>
-                            {
-                                var jsonSettings = new JsonSerializerSettings
-                                {
-                                    TypeNameHandling = TypeNameHandling.Auto,
-                                    ContractResolver = new PrivateResolver()
-                                };
-
-                                s.UseNewtonsoftJson(jsonSettings);
-                            })
+                            .Map<PlatformConnectionUpdateNotificationMessage>(inputQueueName))
 
                 );
 

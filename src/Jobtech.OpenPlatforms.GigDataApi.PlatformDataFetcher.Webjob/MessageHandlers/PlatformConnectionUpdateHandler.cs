@@ -31,7 +31,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
     {
         private readonly IAppManager _appManager;
         private readonly IPlatformDataManager _platformDataManager;
-        private readonly IPlatformManager _platformManager;
         private readonly IDocumentStore _documentStore;
         private readonly RebusConfiguration _rebusConfiguration;
         private readonly IBus _bus;
@@ -41,12 +40,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
         private const int MaxMessageRetries = 100;
 
         public PlatformConnectionUpdateHandler(IAppManager appManager, IPlatformDataManager platformDataManager,
-            IPlatformManager platformManager, IDocumentStore documentStore, IOptions<RebusConfiguration> rebusOptions,
+            IDocumentStore documentStore, IOptions<RebusConfiguration> rebusOptions,
             IBus bus, IMessageContext messageContext, ILogger<PlatformConnectionUpdateHandler> logger)
         {
             _appManager = appManager;
             _platformDataManager = platformDataManager;
-            _platformManager = platformManager;
             _documentStore = documentStore;
             _rebusConfiguration = rebusOptions.Value;
             _bus = bus;
