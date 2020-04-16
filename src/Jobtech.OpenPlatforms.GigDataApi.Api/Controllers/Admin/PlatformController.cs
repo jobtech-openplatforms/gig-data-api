@@ -244,7 +244,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
     {
         [Required, MaxLength(1024)] public string Name { get; set; }
 
-        [Required, JsonConverter(typeof(JsonStringEnumConverter))]
+        [Required]
         public PlatformAuthenticationMechanism AuthMechanism { get; set; }
 
         [Required] public decimal MinRating { get; set; }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Security.Authentication;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Api.Exceptions;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
@@ -64,7 +65,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
 
             Log.Logger = logConf.CreateLogger();
 
-            services.AddMvc();
+            services.AddMvc().AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
 
             var auth0Section = Configuration.GetSection("Auth0");
 
@@ -130,7 +134,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
                     Description = "The GigData Api is intended to be used by parties that in different ways wants to access a users gig data with the consent of the user."
                 });
                 c.DescribeAllParametersInCamelCase();
-
 
                 c.TagActionsBy(ApplyGroupName);
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";

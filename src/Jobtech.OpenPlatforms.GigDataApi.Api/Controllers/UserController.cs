@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading;
@@ -139,6 +140,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
             using var session = _documentStore.OpenAsyncSession();
             var user = await _userManager.GetOrCreateUserIfNotExists(uniqueUserId, session, cancellationToken);
+
             return new UserViewModel(user);
         }
     }
@@ -159,9 +161,24 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         public UserViewModel(User user)
         {
             Id = user.ExternalId;
+
+            UserEmails = user.UserEmails.Select(ue => new UserEmailViewModel(ue.Email, ue.UserEmailState));
         }
 
-        public Guid Id { get; }
+        public Guid Id { get; private set; }
+        public IEnumerable<UserEmailViewModel> UserEmails { get; private set; }
 
+    }
+
+    public class UserEmailViewModel
+    {
+        public UserEmailViewModel(string email, UserEmailState state)
+        {
+            Email = email;
+            State = state;
+        }
+
+        public string Email { get; private set; }
+        public UserEmailState State { get; private set; }
     }
 }

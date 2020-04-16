@@ -425,8 +425,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
         public Guid PlatformId { get; private set; }
         public string Name { get; private set; }
-
-        [JsonConverter(typeof(JsonStringEnumConverter))]
         public PlatformAuthenticationMechanism AuthMechanism { get; private set; }
 
         public string Description { get; private set; }

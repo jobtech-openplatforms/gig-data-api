@@ -144,7 +144,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             State = state;
         }
 
-        [JsonConverter(typeof(JsonStringEnumConverter))]
         public PlatformConnectionState State { get; set; }
     }
 
