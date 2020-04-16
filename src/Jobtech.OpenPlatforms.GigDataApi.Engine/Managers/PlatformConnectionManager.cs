@@ -116,7 +116,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         {
             userPlatformEmailAddress = userPlatformEmailAddress.ToLowerInvariant();
 
-            var platform = await _platformManager.GetPlatformByExternalId(externalPlatformId, session);
+            var platform = await _platformManager.GetPlatformByExternalId(externalPlatformId, session, cancellationToken);
 
             if (platform.AuthenticationMechanism != PlatformAuthenticationMechanism.Email)
             {
@@ -270,7 +270,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         private async Task<string> HandleOAuthCompleteResult(OAuthCompleteResult oAuthCompleteResult, Platform platform,
             IAsyncDocumentSession session, CancellationToken cancellationToken)
         {
-            var user = await _userManager.GetUserByExternalId(oAuthCompleteResult.UserId, session);
+            var user = await _userManager.GetUserByExternalId(oAuthCompleteResult.UserId, session, cancellationToken);
             var app = await _appManager.GetAppFromApplicationId(oAuthCompleteResult.ApplicationId, session,
                 cancellationToken);
 
@@ -299,15 +299,16 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
                 existingPlatformConnection.ConnectionInfo = oauthPlatformConnectionInfo;
             }
+            else
+            {
+                //No platform connection existed. Create a new one for the platform.
+                var platformConnection = new PlatformConnection(platform.Id, platform.Name, platform.ExternalId,
+                    new OAuthPlatformConnectionInfo(new Token(oAuthCompleteResult.Token)),
+                    platform.DataPollIntervalInSeconds);
+                platformConnection.ConnectionInfo.NotificationInfos.Add(new NotificationInfo(app.Id));
 
-
-
-            var platformConnection = new PlatformConnection(platform.Id, platform.Name, platform.ExternalId,
-                new OAuthPlatformConnectionInfo(new Token(oAuthCompleteResult.Token)),
-                platform.DataPollIntervalInSeconds);
-            platformConnection.ConnectionInfo.NotificationInfos.Add(new NotificationInfo(app.Id));
-
-            user.PlatformConnections.Add(platformConnection);
+                user.PlatformConnections.Add(platformConnection);
+            }
 
             await session.SaveChangesAsync(cancellationToken);
 
