@@ -45,7 +45,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         private async Task SendMail(string fromAddress, string toAddress, string subject, string body,
             bool isBodyHtml = false)
         {
-            var mailMessage = new MailMessage { From = new MailAddress(fromAddress) };
+            var mailMessage = new MailMessage { From = new MailAddress(fromAddress, "Open Platforms") };
             mailMessage.To.Add(toAddress);
             mailMessage.Subject = subject;
             mailMessage.Body = body;
