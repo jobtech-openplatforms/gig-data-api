@@ -4,13 +4,27 @@ using System.Net;
 using System.Net.Mail;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Engine.Configuration;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
+using Microsoft.Extensions.Options;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {
-    public class MailManager
+    public interface IMailManager
     {
-        public async Task SendConfirmEmailAddressMail(string emailAddressToConfirm)
+        Task SendConfirmEmailAddressMail(string emailAddressToConfirm, string acceptUrl, string declineUrl);
+    }
+
+    public class MailManager: IMailManager
+    {
+        private readonly SmtpConfiguration _smtpConfiguration;
+
+        public MailManager(IOptions<SmtpConfiguration> smtpOptions)
+        {
+            _smtpConfiguration = smtpOptions.Value;
+        }
+
+        public async Task SendConfirmEmailAddressMail(string emailAddressToConfirm, string acceptUrl, string declineUrl)
         {
             if (!IsValidEmail(emailAddressToConfirm))
             {
@@ -20,8 +34,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             var subject = "OpenPlatforms email ownership verification";
             var messageBody =
                 $"OpenPlatforms.org would like to verify that the email address <b>{emailAddressToConfirm}</b> is controlled by you. <br/><br/>" +
-                $"If you initiated the verification process from OpenPlatforms.org please click on the following link to verify ownership: <a href=\"\">Verify</a>.<br/><br/>" +
-                $"If you did not initiate the verification process or if you do not want to proceed with the verifications, click the following link: <a href=\"\">Don't verify</a>.<br/><br/>" +
+                $"If you initiated the verification process from OpenPlatforms.org please click on the following link to verify ownership: <a href=\"{acceptUrl}\">Verify</a>.<br/><br/>" +
+                $"If you did not initiate the verification process or if you do not want to proceed with the verifications, click the following link: <a href=\"{declineUrl}\">Don't verify</a>.<br/><br/>" +
                 $"Greetings from OpenPlatform.org";
 
             await SendMail("verify@openplatforms.org", emailAddressToConfirm, subject, messageBody, true);
@@ -37,9 +51,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             mailMessage.Body = body;
             mailMessage.IsBodyHtml = isBodyHtml;
 
-            using var client = new SmtpClient("mailcluster.loopia.se", 587)
+            using var client = new SmtpClient(_smtpConfiguration.Server, 587)
             {
-                Credentials = new NetworkCredential("blaj", "bloj"),
+                Credentials = new NetworkCredential(_smtpConfiguration.Username, _smtpConfiguration.Password),
                 EnableSsl = true
             };
             await client.SendMailAsync(mailMessage);

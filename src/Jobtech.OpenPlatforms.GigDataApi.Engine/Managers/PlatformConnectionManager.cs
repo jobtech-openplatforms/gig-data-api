@@ -20,8 +20,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             App app,
             string oauthCallbackUrl, IAsyncDocumentSession session, CancellationToken cancellationToken = default);
 
-        Task<PlatformConnectionStartResult> ConnectUserToEmailPlatform(Guid externalPlatformId, User user, App app,
-            string userPlatformEmailAddress, IAsyncDocumentSession session, bool emailIsValidated = false,
+        Task<PlatformConnectionStartResult> ConnectUserToEmailPlatform(Guid externalPlatformId, User user,
+            App app, string userPlatformEmailAddress, string emailVerificationAcceptUrl, string emailVerificationDeclineUrl,
+            IAsyncDocumentSession session, bool emailIsValidated = false,
             CancellationToken cancellationToken = default);
 
         Task<string> CompleteConnectUserToOAuthPlatform(Guid externalPlatformId, string code, string stateStr,
@@ -110,8 +111,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         }
 
         public async Task<PlatformConnectionStartResult> ConnectUserToEmailPlatform(Guid externalPlatformId, User user,
-            App app,
-            string userPlatformEmailAddress, IAsyncDocumentSession session, bool emailIsValidated = false,
+            App app, string userPlatformEmailAddress, string emailVerificationAcceptUrl, string emailVerificationDeclineUrl, 
+            IAsyncDocumentSession session, bool emailIsValidated = false,
             CancellationToken cancellationToken = default)
         {
             userPlatformEmailAddress = userPlatformEmailAddress.ToLowerInvariant();
@@ -173,7 +174,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                     //TODO: we need to think about how to resend verification as well
 
                     //user email is unverified, start verification process
-                    await _emailValidatorManager.StartEmailValidation(userPlatformEmailAddress, user, app, session,
+                    await _emailValidatorManager.StartEmailValidation(userPlatformEmailAddress, user, app,
+                        emailVerificationAcceptUrl, emailVerificationDeclineUrl, session,
                         platform.Id, cancellationToken: cancellationToken);
 
                     await _appNotificationManager.NotifyPlatformConnectionAwaitingEmailVerification(user.Id,

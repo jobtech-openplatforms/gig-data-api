@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,23 +12,24 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {
     public interface IEmailValidatorManager
     {
-        Task StartEmailValidation(string emailToValidate, User user, App app, IAsyncDocumentSession session,
-            string platformId = "None", bool shouldResendPrompt = false, CancellationToken cancellationToken = default);
+        Task StartEmailValidation(string emailToValidate, User user, App app, string acceptUrl, string declineUrl,
+            IAsyncDocumentSession session, string platformId = "None", bool shouldResendPrompt = false,
+            CancellationToken cancellationToken = default);
 
-        Task<EmailPrompt> CompleteEmailValidation(string promptId, IAsyncDocumentSession session,
+        Task<EmailPrompt> CompleteEmailValidation(Guid promptId, bool result, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default);
     }
 
     public class EmailValidatorManager : IEmailValidatorManager
     {
-        private readonly ApproveApiHttpClient _approveApiHttpClient;
+        private readonly IMailManager _mailManager;
 
-        public EmailValidatorManager(ApproveApiHttpClient approveApiHttpClient)
+        public EmailValidatorManager(IMailManager mailManager)
         {
-            _approveApiHttpClient = approveApiHttpClient;
+            _mailManager = mailManager;
         }
 
-        public async Task StartEmailValidation(string emailToValidate, User user, App app,
+        public async Task StartEmailValidation(string emailToValidate, User user, App app, string acceptUrl, string declineUrl,
             IAsyncDocumentSession session, string platformId = "None", bool shouldResendPrompt = false,
             CancellationToken cancellationToken = default)
         {
@@ -67,14 +69,20 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 }
             }
 
-            var (promptId, expiresIn) = await _approveApiHttpClient.SendEmailValidationPrompt(emailToValidate);
+            var promptId = Guid.NewGuid();
+            var expiresAt = DateTimeOffset.UtcNow.AddHours(48).ToUnixTimeSeconds();
 
-            var createdPrompt = new EmailPrompt(promptId, user.Id, emailToValidate, expiresIn,
+            acceptUrl = acceptUrl.Replace("{promptId}", promptId.ToString());
+            declineUrl = declineUrl.Replace("{promptId}", promptId.ToString());
+
+            await _mailManager.SendConfirmEmailAddressMail(emailToValidate, acceptUrl, declineUrl);
+
+            var createdPrompt = new EmailPrompt(promptId, user.Id, emailToValidate, expiresAt,
                 app.Id, platformId);
             await session.StoreAsync(createdPrompt, cancellationToken);
         }
 
-        public async Task<EmailPrompt> CompleteEmailValidation(string promptId, IAsyncDocumentSession session,
+        public async Task<EmailPrompt> CompleteEmailValidation(Guid promptId, bool result, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default)
         {
             var prompt = await session.Query<EmailPrompt>()
@@ -85,12 +93,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 throw new EmailPromptDoesNotExistException(promptId);
             }
 
-            var promptAnswer = await _approveApiHttpClient.GetPromptAnswer(promptId);
-
-            if (promptAnswer.HasValue)
+            if (prompt.HasExpired())
             {
-                prompt.SetResult(promptAnswer.Value);
+                throw new EmailPromptExpiredException(prompt.PromptId);
             }
+
+            prompt.SetResult(result);
 
             return prompt;
         }

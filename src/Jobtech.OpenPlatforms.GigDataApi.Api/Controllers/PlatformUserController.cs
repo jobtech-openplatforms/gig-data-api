@@ -5,12 +5,14 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Api.Configuration;
 using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
@@ -27,10 +29,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         private readonly IPlatformManager _platformManager;
         private readonly IUserManager _userManager;
         private readonly IAppManager _appManager;
+        private readonly EmailVerificationConfiguration _emailVerificationConfiguration;
 
         public PlatformUserController(IDocumentStore documentStore, IHttpContextAccessor httpContextAccessor,
             IPlatformConnectionManager platformConnectionManager, IAppNotificationManager appNotificationManager,
-            IPlatformManager platformManager, IUserManager userManager, IAppManager appManager)
+            IPlatformManager platformManager, IUserManager userManager, IAppManager appManager, IOptions<EmailVerificationConfiguration> emailVerificationOptions)
         {
             _documentStore = documentStore;
             _httpContextAccessor = httpContextAccessor;
@@ -39,6 +42,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             _platformManager = platformManager;
             _userManager = userManager;
             _appManager = appManager;
+            _emailVerificationConfiguration = emailVerificationOptions.Value;
         }
 
         [HttpPost("start-connect-user-to-oauth-platform")]
@@ -110,7 +114,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
             var result = await _platformConnectionManager.ConnectUserToEmailPlatform(model.PlatformId, existingUser,
                 app,
-                model.PlatformUserEmailAddress, session, cancellationToken: cancellationToken);
+                model.PlatformUserEmailAddress, _emailVerificationConfiguration.AcceptUrl,
+                _emailVerificationConfiguration.DeclineUrl,
+                session, cancellationToken: cancellationToken);
 
             await session.SaveChangesAsync(cancellationToken);
 

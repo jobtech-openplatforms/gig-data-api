@@ -14,16 +14,13 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
             ExternalId = Guid.NewGuid();
         }
 
-        public User(string uniqueIdentifier, string firstName, string lastName) : this()
+        public User(string uniqueIdentifier) : this()
         {
             UniqueIdentifier = uniqueIdentifier;
-            FirstName = firstName;
-            LastName = lastName;
         }
 
 
-        public string FirstName { get; private set; }
-        public string LastName { get; private set; }
+        public string Name { get; set; }
         public string UniqueIdentifier { get; private set; }
         public Guid ExternalId { get; private set; }
         public IList<PlatformConnection> PlatformConnections { get; private set; }

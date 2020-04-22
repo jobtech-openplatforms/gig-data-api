@@ -4,11 +4,13 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Api.Configuration;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
@@ -24,11 +26,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         private readonly IPlatformManager _platformManager;
         private readonly IAppManager _appManager;
         private readonly IUserManager _userManager;
+        private readonly EmailVerificationConfiguration _emailVerificationConfiguration;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         public EmailValidationController(IEmailValidatorManager emailValidatorManager,
             IPlatformConnectionManager platformConnectionManager, IPlatformManager platformManager,
-            IAppManager appManager, IUserManager userManager,
+            IAppManager appManager, IUserManager userManager, IOptions<EmailVerificationConfiguration> emailVerificationOptions,
             IDocumentStore documentStore, IHttpContextAccessor httpContextAccessor)
         {
             _emailValidatorManager = emailValidatorManager;
@@ -36,18 +39,18 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             _platformManager = platformManager;
             _appManager = appManager;
             _userManager = userManager;
+            _emailVerificationConfiguration = emailVerificationOptions.Value;
             _documentStore = documentStore;
             _httpContextAccessor = httpContextAccessor;
         }
 
-        [HttpPost("callback")]
-        [ApiExplorerSettings(IgnoreApi = true)]
+        [HttpGet("callback")]
         [AllowAnonymous]
-        public async Task<IActionResult> PromptCallback([FromQuery(Name = "prompt_id")] string promptId,
+        public async Task<IActionResult> PromptCallback([FromQuery(Name = "prompt_id")] Guid promptId, [FromQuery(Name = "accept")] bool accept,
             CancellationToken cancellationToken)
         {
             using var session = _documentStore.OpenAsyncSession();
-            var prompt = await _emailValidatorManager.CompleteEmailValidation(promptId, session, cancellationToken);
+            var prompt = await _emailValidatorManager.CompleteEmailValidation(promptId, accept, session, cancellationToken);
 
             var user = await session.LoadAsync<User>(prompt.UserId, cancellationToken);
 
@@ -65,15 +68,22 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
                     foreach (var platformId in prompt.PlatformIdToAppId.Keys)
                     {
-                        var platform = await _platformManager.GetPlatform(platformId, session, cancellationToken);
+                        Core.Entities.Platform platform = null;
+                        if (platformId != "None")
+                        {
+                            platform = await _platformManager.GetPlatform(platformId, session, cancellationToken);
+                        }
+
+                        
                         foreach (var appId in prompt.PlatformIdToAppId[platformId])
                         {
                             var app = apps[appId];
-                            if (platformId != "None")
+                            if (platform != null)
                             {
                                 await _platformConnectionManager.ConnectUserToEmailPlatform(platform.ExternalId, user,
                                     app,
-                                    prompt.EmailAddress, session, true, cancellationToken);
+                                    prompt.EmailAddress, _emailVerificationConfiguration.AcceptUrl,
+                                    _emailVerificationConfiguration.DeclineUrl, session, true, cancellationToken);
                             }
 
                             if (appIdsToNotify.All(aid => aid != appId))
@@ -126,7 +136,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
                 if (model.ResendValidationMail)
                 {
-                    await _emailValidatorManager.StartEmailValidation(emailToValidate, user, app, session,
+                    await _emailValidatorManager.StartEmailValidation(emailToValidate, user, app,
+                        _emailVerificationConfiguration.AcceptUrl, _emailVerificationConfiguration.DeclineUrl, session,
                         "None", true, cancellationToken);
                     await session.SaveChangesAsync(cancellationToken);
                     return UserEmailState.AwaitingVerification;
@@ -135,7 +146,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                 return existingUserEmail.UserEmailState;
             }
 
-            await _emailValidatorManager.StartEmailValidation(model.Email, user, app, session,
+            await _emailValidatorManager.StartEmailValidation(model.Email, user, app,
+                _emailVerificationConfiguration.AcceptUrl, _emailVerificationConfiguration.DeclineUrl, session,
                 cancellationToken: cancellationToken);
             await session.SaveChangesAsync(cancellationToken);
             return UserEmailState.AwaitingVerification;

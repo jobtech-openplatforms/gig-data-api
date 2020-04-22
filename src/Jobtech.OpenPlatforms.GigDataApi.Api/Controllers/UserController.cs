@@ -26,7 +26,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         private readonly IUserManager _userManager;
         private readonly IAppManager _appManager;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly MailManager _mailManager;
         private readonly string _auth0TenantUrl;
         private readonly string _auth0CvDataAudience;
         private readonly string _auth0MobileBankIdConnectionName;
@@ -40,7 +39,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             _userManager = userManager;
             _appManager = appManager;
             _httpContextAccessor = httpContextAccessor;
-            _mailManager = mailManager;
             _auth0TenantUrl = auth0Options.Value.TenantDomain;
             _auth0CvDataAudience = auth0Options.Value.CVDataAudience;
             _auth0MobileBankIdConnectionName = auth0Options.Value.MobileBankIdConnectionName;
@@ -99,40 +97,40 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             return new AuthEndpointInfoViewModel {Url = url};
         }
 
-        [HttpPost("add-validated-email-address")]
-        [AllowAnonymous]
-        public async Task<IActionResult> AddValidatedEmailAddress([FromHeader(Name = "app_secret")] string appSecret,
-            [FromBody] ValidatedEmailModel model, CancellationToken cancellationToken)
-        {
-            using var session = _documentStore.OpenAsyncSession();
-            var user = await _userManager.GetUserByExternalId(model.UserId, session, cancellationToken);
-            var app = await _appManager.GetAppFromSecretKey(appSecret, session, cancellationToken);
+        //[HttpPost("add-validated-email-address")]
+        //[AllowAnonymous]
+        //public async Task<IActionResult> AddValidatedEmailAddress([FromHeader(Name = "app_secret")] string appSecret,
+        //    [FromBody] ValidatedEmailModel model, CancellationToken cancellationToken)
+        //{
+        //    using var session = _documentStore.OpenAsyncSession();
+        //    var user = await _userManager.GetUserByExternalId(model.UserId, session, cancellationToken);
+        //    var app = await _appManager.GetAppFromSecretKey(appSecret, session, cancellationToken);
 
-            var existingUserEmail =
-                user.UserEmails.SingleOrDefault(ue => ue.Email == model.Email.ToLowerInvariant());
+        //    var existingUserEmail =
+        //        user.UserEmails.SingleOrDefault(ue => ue.Email == model.Email.ToLowerInvariant());
 
-            if (existingUserEmail != null)
-            {
-                if (existingUserEmail.UserEmailState != UserEmailState.Verified)
-                {
-                    existingUserEmail.SetEmailState(UserEmailState.Verified);
-                    existingUserEmail.IsVerifiedFromApp = true;
-                    existingUserEmail.VerifyingAppId = app.Id;
-                }
-            }
-            else
-            {
-                var newUserEmail = new UserEmail(model.Email.ToLowerInvariant(), UserEmailState.Verified)
-                {
-                    IsVerifiedFromApp = true, VerifyingAppId = app.Id
-                };
-                user.UserEmails.Add(newUserEmail);
-            }
+        //    if (existingUserEmail != null)
+        //    {
+        //        if (existingUserEmail.UserEmailState != UserEmailState.Verified)
+        //        {
+        //            existingUserEmail.SetEmailState(UserEmailState.Verified);
+        //            existingUserEmail.IsVerifiedFromApp = true;
+        //            existingUserEmail.VerifyingAppId = app.Id;
+        //        }
+        //    }
+        //    else
+        //    {
+        //        var newUserEmail = new UserEmail(model.Email.ToLowerInvariant(), UserEmailState.Verified)
+        //        {
+        //            IsVerifiedFromApp = true, VerifyingAppId = app.Id
+        //        };
+        //        user.UserEmails.Add(newUserEmail);
+        //    }
 
-            await session.SaveChangesAsync(cancellationToken);
+        //    await session.SaveChangesAsync(cancellationToken);
 
-            return Ok("Email address added");
-        }
+        //    return Ok("Email address added");
+        //}
 
         [HttpGet]
         [Produces("application/json")]
@@ -144,15 +142,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             var user = await _userManager.GetOrCreateUserIfNotExists(uniqueUserId, session, cancellationToken);
 
             return new UserViewModel(user);
-        }
-
-        [HttpGet("sendmail")]
-        [AllowAnonymous]
-        public async Task<IActionResult> SendMail(CancellationToken cancellationToken)
-        {
-            //await _mailManager.SendMail(cancellationToken);
-
-            return Ok();
         }
     }
 

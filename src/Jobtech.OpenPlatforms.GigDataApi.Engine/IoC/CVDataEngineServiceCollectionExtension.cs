@@ -1,4 +1,5 @@
 ﻿using System;
+using Jobtech.OpenPlatforms.GigDataApi.Engine.Configuration;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer.IoC;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform.IoC;
@@ -18,6 +19,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.IoC
             collection.AddTransient<IAppManager, AppManager>();
             collection.AddTransient<IAppNotificationManager, AppNotificationManager>();
             collection.AddTransient<IPlatformDataManager, PlatformDataManager>();
+            collection.AddTransient<IMailManager, MailManager>();
             collection.AddTransient<MailManager>();
 
             return collection;
@@ -62,20 +64,18 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.IoC
             collection.AddHttpClient<Auth0ManagementApiHttpClient>(
                 client => { client.BaseAddress = new Uri(tenantDomain); });
 
-            var approveApiSection = configuration.GetSection("ApproveApi");
-            var approveApiApiKey = approveApiSection.GetValue<string>("ApiKey");
-            var approveApiApiUrl = approveApiSection.GetValue<string>("ApiUrl");
-            var approveApiConfirmEmailCallbackUrl = approveApiSection.GetValue<string>("ConfirmEmailCallbackUrl");
-            var approveApiRejectEmailCallbackUrl = approveApiSection.GetValue<string>("RejectEmailCallbackUrl");
-            collection.Configure<ApproveApiConfiguration>(options =>
-            {
-                options.ApiKey = approveApiApiKey;
-                options.ApiUrl = approveApiApiUrl;
-                options.ConfirmEmailCallbackUri = approveApiConfirmEmailCallbackUrl;
-                options.RejectEmailCallbackUri = approveApiRejectEmailCallbackUrl;
-            });
+            //collection.AddHttpClient<Auth0Client>(client =>
+            //{
+            //    client.BaseAddress = new Uri(tenantDomain);
+            //});
 
-            collection.AddHttpClient<ApproveApiHttpClient>(client => { client.BaseAddress = new Uri(approveApiApiUrl); });
+            var smtpSection = configuration.GetSection("Smtp");
+            collection.Configure<SmtpConfiguration>(c =>
+            {
+                c.Server = smtpSection.GetValue<string>("Server");
+                c.Username = smtpSection.GetValue<string>("Username");
+                c.Password = smtpSection.GetValue<string>("Password");
+            });
 
             return collection;
         }
@@ -99,14 +99,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.IoC
             public string CVDataAudience { get; set; }
             public string MobileBankIdConnectionName { get; set; }
             public string DatabaseConnectionName { get; set; }
-        }
-
-        public class ApproveApiConfiguration
-        {
-            public string ApiUrl { get; set; }
-            public string ApiKey { get; set; }
-            public string ConfirmEmailCallbackUri { get; set; }
-            public string RejectEmailCallbackUri { get; set; }
         }
     }
 }
