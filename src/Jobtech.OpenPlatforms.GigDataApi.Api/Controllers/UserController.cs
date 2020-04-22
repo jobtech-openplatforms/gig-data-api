@@ -24,20 +24,18 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
     {
         private readonly IDocumentStore _documentStore;
         private readonly IUserManager _userManager;
-        private readonly IAppManager _appManager;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly string _auth0TenantUrl;
         private readonly string _auth0CvDataAudience;
         private readonly string _auth0MobileBankIdConnectionName;
         private readonly string _auth0DatabaseConnectionName;
 
-        public UserController(IDocumentStore documentStore, IUserManager userManager, IAppManager appManager,
-            IHttpContextAccessor httpContextAccessor, MailManager mailManager,
+        public UserController(IDocumentStore documentStore, IUserManager userManager,
+            IHttpContextAccessor httpContextAccessor,
             IOptions<CVDataEngineServiceCollectionExtension.Auth0Configuration> auth0Options)
         {
             _documentStore = documentStore;
             _userManager = userManager;
-            _appManager = appManager;
             _httpContextAccessor = httpContextAccessor;
             _auth0TenantUrl = auth0Options.Value.TenantDomain;
             _auth0CvDataAudience = auth0Options.Value.CVDataAudience;

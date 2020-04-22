@@ -60,7 +60,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             Description = description;
             LogoUrl = logoUrl;
             WebsiteUrl = websiteUrl;
-            AuthorizationCallbackUri = authorizationCallbackUrl;
+            AuthorizationCallbackUrl = authorizationCallbackUrl;
         }
 
         public string ApplicationId { get; private set; }
@@ -68,6 +68,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         public string Description { get; private set; }
         public string LogoUrl { get; private set; }
         public string WebsiteUrl { get; private set; }
-        public string AuthorizationCallbackUri { get; private set; }
+        public string AuthorizationCallbackUrl { get; private set; }
     }
 }
