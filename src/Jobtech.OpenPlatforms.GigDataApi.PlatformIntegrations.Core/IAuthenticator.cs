@@ -6,7 +6,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core
 {
     public interface IAuthenticator
     {
-        string GetAuthorizationUrl(Guid userId, string redirectUrl, string applicationId);
+        string GetAuthorizationUrl(Guid userId, string redirectUrl, Guid applicationId);
         Task<OAuthCompleteResult> CompleteAuthorization(string authorizationGrantCode, string stateStr);
         Task<OAuthAccessToken> RefreshToken(OAuthAccessToken token);
     }

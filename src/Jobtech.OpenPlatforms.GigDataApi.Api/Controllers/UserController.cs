@@ -26,19 +26,21 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         private readonly IUserManager _userManager;
         private readonly IAppManager _appManager;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly MailManager _mailManager;
         private readonly string _auth0TenantUrl;
         private readonly string _auth0CvDataAudience;
         private readonly string _auth0MobileBankIdConnectionName;
         private readonly string _auth0DatabaseConnectionName;
 
         public UserController(IDocumentStore documentStore, IUserManager userManager, IAppManager appManager,
-            IHttpContextAccessor httpContextAccessor,
+            IHttpContextAccessor httpContextAccessor, MailManager mailManager,
             IOptions<CVDataEngineServiceCollectionExtension.Auth0Configuration> auth0Options)
         {
             _documentStore = documentStore;
             _userManager = userManager;
             _appManager = appManager;
             _httpContextAccessor = httpContextAccessor;
+            _mailManager = mailManager;
             _auth0TenantUrl = auth0Options.Value.TenantDomain;
             _auth0CvDataAudience = auth0Options.Value.CVDataAudience;
             _auth0MobileBankIdConnectionName = auth0Options.Value.MobileBankIdConnectionName;
@@ -49,7 +51,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         [HttpGet("mobile-bank-id-authorization-url/{applicationId}")]
         [AllowAnonymous]
         [Produces("application/json")]
-        public async Task<ActionResult<AuthEndpointInfoViewModel>> GetMobileBankIdAuthorizationUrl(string applicationId,
+        public async Task<ActionResult<AuthEndpointInfoViewModel>> GetMobileBankIdAuthorizationUrl(Guid applicationId,
             [FromQuery] string redirectUrl, CancellationToken cancellationToken)
         {
             return await GetAuthorizationUrl(_auth0MobileBankIdConnectionName, applicationId, redirectUrl,
@@ -60,18 +62,18 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         [AllowAnonymous]
         [Produces("application/json")]
         public async Task<ActionResult<AuthEndpointInfoViewModel>> GetUsernamePasswordAuthorizationUrl(
-            string applicationId, [FromQuery] string redirectUrl, CancellationToken cancellationToken)
+            Guid applicationId, [FromQuery] string redirectUrl, CancellationToken cancellationToken)
         {
             return await GetAuthorizationUrl(_auth0DatabaseConnectionName, applicationId, redirectUrl,
                 cancellationToken);
         }
 
-        private async Task<AuthEndpointInfoViewModel> GetAuthorizationUrl(string connectionName, string applicationId,
+        private async Task<AuthEndpointInfoViewModel> GetAuthorizationUrl(string connectionName, Guid applicationId,
             string redirectUrl, CancellationToken cancellationToken)
         {
             using var session = _documentStore.OpenAsyncSession();
             var app = await session.Query<App>()
-                .SingleOrDefaultAsync(a => a.ApplicationId == applicationId, cancellationToken);
+                .SingleOrDefaultAsync(a => a.ExternalId == applicationId, cancellationToken);
 
             if (app == null)
             {
@@ -142,6 +144,15 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             var user = await _userManager.GetOrCreateUserIfNotExists(uniqueUserId, session, cancellationToken);
 
             return new UserViewModel(user);
+        }
+
+        [HttpGet("sendmail")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SendMail(CancellationToken cancellationToken)
+        {
+            //await _mailManager.SendMail(cancellationToken);
+
+            return Ok();
         }
     }
 

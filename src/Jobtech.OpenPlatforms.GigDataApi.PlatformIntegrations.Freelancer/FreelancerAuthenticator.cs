@@ -43,7 +43,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
             
         }
 
-        public string GetAuthorizationUrl(Guid userId, string redirectUrl, string applicationId)
+        public string GetAuthorizationUrl(Guid userId, string redirectUrl, Guid applicationId)
         {
 
             var state = new OAuthState(userId, redirectUrl, applicationId);
@@ -116,7 +116,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
 
     public class OAuthState
     {
-        public OAuthState(Guid userId, string redirectUrl, string applicationId)
+        public OAuthState(Guid userId, string redirectUrl, Guid applicationId)
         {
             UserId = userId;
             RedirectUrl = redirectUrl;
@@ -125,6 +125,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
 
         public Guid UserId { get; set; }
         public string RedirectUrl { get; set; }
-        public string ApplicationId { get; set; }
+        public Guid ApplicationId { get; set; }
     }
 }

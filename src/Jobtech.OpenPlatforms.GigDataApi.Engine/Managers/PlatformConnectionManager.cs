@@ -92,7 +92,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 case PlatformIntegrationType.FreelancerIntegration:
                     var oauthAuthenticationUrl =
                         _freelancerAuthenticator.GetAuthorizationUrl(user.ExternalId, oauthCallbackUrl,
-                            app.ApplicationId);
+                            app.ExternalId);
                     return new PlatformOAuthConnectionStartResult(PlatformConnectionState.AwaitingOAuthAuthentication,
                         oauthAuthenticationUrl);
                 case PlatformIntegrationType.AirbnbIntegration:
@@ -219,23 +219,16 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             var platform =
                 await _platformManager.GetPlatformByExternalId(externalPlatformId, session, cancellationToken);
 
-            OAuthCompleteResult completeResult;
-            switch (platform.IntegrationType)
+            OAuthCompleteResult completeResult = platform.IntegrationType switch
             {
-                case PlatformIntegrationType.FreelancerIntegration:
-                    completeResult = await _freelancerAuthenticator.CompleteAuthorization(code, stateStr);
-                    break;
-                case PlatformIntegrationType.AirbnbIntegration:
-                    throw new NotImplementedException();
-                case PlatformIntegrationType.UpworkIntegration:
-                    throw new NotImplementedException();
-                case PlatformIntegrationType.GigDataPlatformIntegration:
-                    throw new NotImplementedException();
-                case PlatformIntegrationType.Manual:
-                    throw new PlatformDoesNotSupportAutomaticConnection();
-                default:
-                    throw new ArgumentException($"Unknown integration type {platform.IntegrationType}");
-            }
+                PlatformIntegrationType.FreelancerIntegration => await _freelancerAuthenticator.CompleteAuthorization(
+                    code, stateStr),
+                PlatformIntegrationType.AirbnbIntegration => throw new NotImplementedException(),
+                PlatformIntegrationType.UpworkIntegration => throw new NotImplementedException(),
+                PlatformIntegrationType.GigDataPlatformIntegration => throw new NotImplementedException(),
+                PlatformIntegrationType.Manual => throw new PlatformDoesNotSupportAutomaticConnection(),
+                _ => throw new ArgumentException($"Unknown integration type {platform.IntegrationType}")
+            };
 
             return await HandleOAuthCompleteResult(completeResult, platform, session, cancellationToken);
         }

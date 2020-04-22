@@ -4,7 +4,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.OAuth
 {
     public class OAuthCompleteResult
     {
-        public OAuthCompleteResult(string redirectUrl, Guid userId, string applicationId, OAuthAccessToken token)
+        public OAuthCompleteResult(string redirectUrl, Guid userId, Guid applicationId, OAuthAccessToken token)
         {
             RedirectUrl = redirectUrl;
             UserId = userId;
@@ -16,6 +16,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.OAuth
         public OAuthAccessToken Token { get; }
         public Guid UserId { get; }
         public string RedirectUrl { get; }
-        public string ApplicationId { get; }
+        public Guid ApplicationId { get; }
     }
 }

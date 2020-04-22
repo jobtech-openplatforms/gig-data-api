@@ -136,7 +136,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
             var updatePayload = CreatePayload(platform.ExternalId, user.ExternalId, app.SecretKey, platform.Name,
                 platformConnectionState, DateTimeOffset.UtcNow, notificationReason, platformData);
 
-            if (string.IsNullOrWhiteSpace(app.NotificationEndpoint))
+            if (string.IsNullOrWhiteSpace(app.DataUpdateCallbackUrl))
             {
                 _logger.LogWarning(
                     $"No notification endpoint was given. Will move message to error queue.");
@@ -161,7 +161,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
             {
                 var httpClient = new HttpClient();
                 response = await httpClient.PostAsync(
-                    new Uri(app.NotificationEndpoint),
+                    new Uri(app.DataUpdateCallbackUrl),
                     content, cancellationToken);
             }
             catch (Exception e)

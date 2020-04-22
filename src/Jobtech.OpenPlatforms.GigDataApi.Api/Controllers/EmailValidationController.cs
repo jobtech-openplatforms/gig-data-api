@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading;
@@ -23,13 +24,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         private readonly IPlatformManager _platformManager;
         private readonly IAppManager _appManager;
         private readonly IUserManager _userManager;
-        private readonly IAppNotificationManager _appNotificationManager;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         public EmailValidationController(IEmailValidatorManager emailValidatorManager,
             IPlatformConnectionManager platformConnectionManager, IPlatformManager platformManager,
             IAppManager appManager, IUserManager userManager,
-            IAppNotificationManager appNotificationManager,
             IDocumentStore documentStore, IHttpContextAccessor httpContextAccessor)
         {
             _emailValidatorManager = emailValidatorManager;
@@ -37,7 +36,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             _platformManager = platformManager;
             _appManager = appManager;
             _userManager = userManager;
-            _appNotificationManager = appNotificationManager;
             _documentStore = documentStore;
             _httpContextAccessor = httpContextAccessor;
         }
@@ -84,10 +82,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                             }
                         }
                     }
-
-                    //notify
-                    await _appNotificationManager.NotifyEmailValidationDone(user.Id, appIdsToNotify,
-                        userEmail.Email, session, cancellationToken);
                 }
             }
 
@@ -154,7 +148,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         /// The id of the application.
         /// </summary>
         [Required]
-        public string ApplicationId { get; set; }
+        public Guid ApplicationId { get; set; }
 
         /// <summary>
         /// The email to validate.

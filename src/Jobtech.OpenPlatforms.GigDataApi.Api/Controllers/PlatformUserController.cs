@@ -25,21 +25,18 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         private readonly IPlatformConnectionManager _platformConnectionManager;
         private readonly IAppNotificationManager _appNotificationManager;
         private readonly IPlatformManager _platformManager;
-        private readonly IPlatformDataManager _platformDataManager;
         private readonly IUserManager _userManager;
         private readonly IAppManager _appManager;
 
         public PlatformUserController(IDocumentStore documentStore, IHttpContextAccessor httpContextAccessor,
             IPlatformConnectionManager platformConnectionManager, IAppNotificationManager appNotificationManager,
-            IPlatformManager platformManager, IPlatformDataManager platformDataManager, IUserManager userManager,
-            IAppManager appManager)
+            IPlatformManager platformManager, IUserManager userManager, IAppManager appManager)
         {
             _documentStore = documentStore;
             _httpContextAccessor = httpContextAccessor;
             _platformConnectionManager = platformConnectionManager;
             _appNotificationManager = appNotificationManager;
             _platformManager = platformManager;
-            _platformDataManager = platformDataManager;
             _userManager = userManager;
             _appManager = appManager;
         }
@@ -88,7 +85,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             {
                 //app not registered for notification. Throw.
                 throw new AppNotRegisteredForNotificationsException(
-                    $"App with application id {app.ApplicationId} is not registered for receiving notifications for platform with id {platform.Id} for user with id {existingUser.ExternalId}");
+                    $"App with application id {app.ExternalId} is not registered for receiving notifications for platform with id {platform.Id} for user with id {existingUser.ExternalId}");
             }
 
             await _appNotificationManager.NotifyPlatformConnectionDataUpdate(existingUser.Id,
@@ -124,7 +121,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
     public abstract class StartPlatformConnectionModelBase
     {
         [Required] public Guid PlatformId { get; set; }
-        [Required] public string ApplicationId { get; set; }
+        [Required] public Guid ApplicationId { get; set; }
     }
 
     public class StartPlatformConnectionOauthModel : StartPlatformConnectionModelBase
@@ -160,7 +157,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
     public class PlatformDataUpdateRequestModel
     {
-        [Required] public string ApplicationId { get; set; }
+        [Required] public Guid ApplicationId { get; set; }
         [Required] public Guid PlatformId { get; set; }
     }
 }

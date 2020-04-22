@@ -234,7 +234,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                         }
 
                         if (platformConnectionStateUpdate.ConnectedApps.Any(applicationId =>
-                            applicationId != correspondingApp.ApplicationId))
+                            applicationId != correspondingApp.ExternalId))
                         {
                             updatedNotificationInfos.Add(notificationInfo);
                         }
@@ -364,7 +364,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
     {
         [Required] public Guid PlatformId { get; set; }
         public bool RemoveConnection { get; set; }
-        public IEnumerable<string> ConnectedApps { get; set; }
+        public IEnumerable<Guid> ConnectedApps { get; set; }
     }
 
     public class InitiateDataFetchModel
@@ -391,10 +391,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                 foreach (var connectionInfoNotificationInfo in platformConnection.ConnectionInfo.NotificationInfos)
                 {
                     var app = apps.Single(a => a.Id == connectionInfoNotificationInfo.AppId);
-                    var appUserConnectionViewModel = Apps.SingleOrDefault(aucvm => aucvm.ApplicationId == app.ApplicationId);
+                    var appUserConnectionViewModel = Apps.SingleOrDefault(aucvm => aucvm.ApplicationId == app.ExternalId.ToString());
                     if (appUserConnectionViewModel == null)
                     {
-                        Apps.Add(new AppUserConnectionViewModel(app.Name, app.ApplicationId,
+                        Apps.Add(new AppUserConnectionViewModel(app.Name, app.ExternalId.ToString(),
                             new List<Guid> {platform.ExternalId}));
                     }
                     else

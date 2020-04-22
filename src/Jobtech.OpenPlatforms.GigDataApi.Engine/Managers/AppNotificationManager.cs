@@ -11,9 +11,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {
     public interface IAppNotificationManager
     {
-        Task NotifyEmailValidationDone(string userId, IList<string> appIds, string email,
-            IAsyncDocumentSession session, CancellationToken cancellationToken = default);
-
         Task NotifyPlatformConnectionAwaitingOAuthAuthentication(string userId, IList<string> appIds, string platformId,
             IAsyncDocumentSession session, CancellationToken cancellationToken = default);
 
@@ -35,19 +32,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         public AppNotificationManager(IBus bus)
         {
             _bus = bus;
-        }
-
-        public async Task NotifyEmailValidationDone(string userId, IList<string> appIds, string email,
-            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
-        {
-            var user = await session.LoadAsync<User>(userId, cancellationToken);
-            var apps = await session.LoadAsync<App>(appIds, cancellationToken);
-
-            foreach (var message in apps.Values.Select(app =>
-                new Common.Messages.EmailVerificationNotificationMessage(email, user.Id, app.Id)))
-            {
-                await _bus.Send(message);
-            }
         }
 
         public async Task NotifyPlatformConnectionAwaitingOAuthAuthentication(string userId, IList<string> appIds,
