@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -144,6 +145,18 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
                 return;
             }
 
+            if (!Uri.TryCreate(app.DataUpdateCallbackUrl, UriKind.Absolute, out var uri))
+            {
+                _logger.LogError("Could not create uri from {DataCallbackUrl}. Will ignore message.", app.DataUpdateCallbackUrl);
+                return;
+            }
+
+            if (IsLocalHost(uri))
+            {
+                _logger.LogWarning("Uri with url {DataCallbackUrl} is equal to localhost. Will ignore message.", app.DataUpdateCallbackUrl);
+                return;
+            }
+
             var serializerSettings = new JsonSerializerSettings
             {
                 ContractResolver = new CamelCasePropertyNamesContractResolver()
@@ -161,7 +174,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
             {
                 var httpClient = new HttpClient();
                 response = await httpClient.PostAsync(
-                    new Uri(app.DataUpdateCallbackUrl),
+                    uri,
                     content, cancellationToken);
             }
             catch (Exception e)
@@ -183,7 +196,29 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
             _logger.LogInformation("App successfully notified about platform data update.");
         }
 
-        private PlatformConnectionUpdateNotificationPayload CreatePayload(Guid externalPlatformId, Guid externalUserId,
+        public static bool IsLocalHost(Uri uri)
+        {
+            var hostName = uri.Host;
+            var hostEntry = Dns.GetHostEntry(hostName);
+
+            var localhost = Dns.GetHostEntry("127.0.0.1");
+            if (string.Equals(hostName, localhost.HostName, StringComparison.InvariantCultureIgnoreCase) &&
+                hostEntry.AddressList.Any(IPAddress.IsLoopback))
+            {
+                return true;
+            }
+
+            localhost = Dns.GetHostEntry(Dns.GetHostName());
+            if (IPAddress.TryParse(hostName, out var ipAddress) && 
+                localhost.AddressList.Any(x => x.Equals(ipAddress)))
+            {
+                return true;
+            }
+
+            return localhost.AddressList.Any(x => hostEntry.AddressList.Any(x.Equals));
+        }
+
+        private static PlatformConnectionUpdateNotificationPayload CreatePayload(Guid externalPlatformId, Guid externalUserId,
             string appSecret, string platformName, PlatformConnectionState platformConnectionState,
             DateTimeOffset updated, NotificationReason notificationReason, PlatformData platformData = null)
         {
