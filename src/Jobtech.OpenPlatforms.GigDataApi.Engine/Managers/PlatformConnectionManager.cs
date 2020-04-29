@@ -75,19 +75,35 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             {
                 //we already have a connection to the platform
 
-                var existingNotificationInfo =
-                    existingPlatformConnection.ConnectionInfo.NotificationInfos.SingleOrDefault(
-                        ni => ni.AppId == app.Id);
-                
-                if (existingNotificationInfo == null)
+                if (existingPlatformConnection.ConnectionInfo.GetType() != typeof(OAuthPlatformConnectionInfo))
                 {
-                    existingPlatformConnection.ConnectionInfo.NotificationInfos.Add(new NotificationInfo(app.Id, platformDataClaim ?? app.DefaultPlatformDataClaim));
+                    //the connection was of another type (Email). Remove it and replace it with an oauth connection.
+                    var connectionIndex = Array.FindIndex(user.PlatformConnections.ToArray(),
+                        pc => pc.PlatformId == platform.Id);
+                    user.PlatformConnections.RemoveAt(connectionIndex);
                 }
+                else
+                {
+                    var existingNotificationInfo =
+                        existingPlatformConnection.ConnectionInfo.NotificationInfos.SingleOrDefault(
+                            ni => ni.AppId == app.Id);
 
-                await _appNotificationManager.NotifyPlatformConnectionDataUpdate(user.Id, new List<string> {app.Id},
-                    platform.Id, session, cancellationToken);
+                    if (existingNotificationInfo == null)
+                    {
+                        existingPlatformConnection.ConnectionInfo.NotificationInfos.Add(
+                            new NotificationInfo(app.Id, platformDataClaim ?? app.DefaultPlatformDataClaim));
+                    }
+                    else
+                    {
+                        //there already existed a notification info to the app at hand. Make sure that it has the given PlatformDataClaim.
+                        existingNotificationInfo.PlatformDataClaim = platformDataClaim ?? app.DefaultPlatformDataClaim;
+                    }
 
-                return new PlatformOAuthConnectionStartResult(PlatformConnectionState.Connected);
+                    await _appNotificationManager.NotifyPlatformConnectionDataUpdate(user.Id, new List<string> { app.Id },
+                        platform.Id, session, cancellationToken);
+
+                    return new PlatformOAuthConnectionStartResult(PlatformConnectionState.Connected);
+                }
             }
 
             await _appNotificationManager.NotifyPlatformConnectionAwaitingOAuthAuthentication(user.Id,
@@ -154,8 +170,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 }
                 else
                 {
+                    var existingNotificationInfo =
+                        existingPlatformConnection.ConnectionInfo.NotificationInfos.SingleOrDefault(ni =>
+                            ni.AppId == app.Id);
+
                     //just add the app to notification infos if it isn't already there.
-                    if (existingPlatformConnection.ConnectionInfo.NotificationInfos.All(ni => ni.AppId != app.Id))
+                    if (existingNotificationInfo == null)
                     {
                         existingPlatformConnection.ConnectionInfo.NotificationInfos.Add(
                             new NotificationInfo(app.Id, platformDataClaim ?? app.DefaultPlatformDataClaim));
@@ -164,6 +184,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                             new List<string> {app.Id},
                             platform.Id, session,
                             cancellationToken);
+                    }
+                    else //make sure that we have the correct PlatformDataClaim
+                    {
+                        existingNotificationInfo.PlatformDataClaim = platformDataClaim ?? app.DefaultPlatformDataClaim;
                     }
 
                     return new PlatformConnectionStartResult(PlatformConnectionState.Connected);
