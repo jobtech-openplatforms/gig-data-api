@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Api.Configuration;
-using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
 using Microsoft.AspNetCore.Authorization;
@@ -72,7 +71,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
                     foreach (var platformId in prompt.PlatformIdToAppId.Keys)
                     {
-                        Core.Entities.Platform platform = null;
+                        Core.Entities.Platform platform;
                         if (platformId != "None")
                         {
                             platform = await _platformManager.GetPlatform(platformId, session, cancellationToken);

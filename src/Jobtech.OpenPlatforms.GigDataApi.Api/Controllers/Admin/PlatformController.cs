@@ -1,6 +1,5 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Core;
