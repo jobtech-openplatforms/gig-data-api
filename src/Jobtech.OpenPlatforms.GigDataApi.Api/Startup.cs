@@ -340,6 +340,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
             {
                 AppDoesNotExistException _ => HttpStatusCode.NotFound,
                 PlatformDoNotExistException _ => HttpStatusCode.NotFound,
+                EmailPromptExpiredException _ => HttpStatusCode.BadRequest,
+                EmailPromptDoesNotExistException _ => HttpStatusCode.NotFound,
                 UnauthorizedAdminCallException _ => HttpStatusCode.Unauthorized,
                 _ => HttpStatusCode.InternalServerError
             };
