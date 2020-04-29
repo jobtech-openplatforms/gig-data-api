@@ -169,10 +169,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 var existingUserEmail =
                     user.UserEmails.SingleOrDefault(ue => ue.Email == userPlatformEmailAddress);
 
-                if (existingUserEmail == null || existingUserEmail.UserEmailState == UserEmailState.Unverified)
+                if (existingUserEmail == null || 
+                    existingUserEmail.UserEmailState == UserEmailState.Unverified)
                 {
-                    //TODO: we need to think about how to resend verification as well
-
                     //user email is unverified, start verification process
                     await _emailValidatorManager.StartEmailValidation(userPlatformEmailAddress, user, app,
                         emailVerificationAcceptUrl, emailVerificationDeclineUrl, session,
@@ -184,9 +183,22 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                     return new PlatformConnectionStartResult(PlatformConnectionState.AwaitingEmailVerification);
 
                 }
-                else if (existingUserEmail.UserEmailState == UserEmailState.AwaitingVerification)
+                
+                if (existingUserEmail.UserEmailState == UserEmailState.AwaitingVerification)
                 {
-                    //the email validation has already been started
+                    //another email validation has already been started
+                    //invalidate that email validation and start a new one
+
+                    await _emailValidatorManager.ExpireAllActiveEmailValidationsForUserEmail(userPlatformEmailAddress, user,
+                        session, cancellationToken);
+
+                    await _emailValidatorManager.StartEmailValidation(userPlatformEmailAddress, user, app,
+                        emailVerificationAcceptUrl, emailVerificationDeclineUrl, session,
+                        platform.Id, cancellationToken: cancellationToken);
+
+                    await _appNotificationManager.NotifyPlatformConnectionAwaitingEmailVerification(user.Id,
+                        new List<string> {app.Id}, platform.Id, session, cancellationToken);
+
                     return new PlatformConnectionStartResult(PlatformConnectionState.AwaitingEmailVerification);
                 }
             }

@@ -18,6 +18,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
         Task<EmailPrompt> CompleteEmailValidation(Guid promptId, bool result, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default);
+
+        Task ExpireAllActiveEmailValidationsForUserEmail(string email, User user,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default);
     }
 
     public class EmailValidatorManager : IEmailValidatorManager
@@ -80,6 +83,26 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             var createdPrompt = new EmailPrompt(promptId, user.Id, emailToValidate, expiresAt,
                 app.Id, platformId);
             await session.StoreAsync(createdPrompt, cancellationToken);
+        }
+
+        public async Task ExpireAllActiveEmailValidationsForUserEmail(string email, User user,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
+        {
+            var existingUserEmail = user.UserEmails.SingleOrDefault(ue => ue.Email == email.ToLowerInvariant());
+            if (existingUserEmail == null)
+            {
+                throw new EmailIsNotUserEmailException(email, user.ExternalId);
+            }
+
+            var activePromptsForUserEndEmail = await session.Query<EmailPrompt>()
+                .Where(ep => ep.UserId == user.Id && ep.EmailAddress == email && !ep.HasExpired())
+                .Take(1024)
+                .ToListAsync(cancellationToken);
+
+            foreach (var emailPrompt in activePromptsForUserEndEmail)
+            {
+                emailPrompt.MarkAsExpired();
+            }
         }
 
         public async Task<EmailPrompt> CompleteEmailValidation(Guid promptId, bool result, IAsyncDocumentSession session,

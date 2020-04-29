@@ -25,19 +25,22 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         private readonly IPlatformConnectionManager _platformConnectionManager;
         private readonly IPlatformManager _platformManager;
         private readonly IAppManager _appManager;
+        private readonly IAppNotificationManager _appNotificationManager;
         private readonly IUserManager _userManager;
         private readonly EmailVerificationConfiguration _emailVerificationConfiguration;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         public EmailValidationController(IEmailValidatorManager emailValidatorManager,
             IPlatformConnectionManager platformConnectionManager, IPlatformManager platformManager,
-            IAppManager appManager, IUserManager userManager, IOptions<EmailVerificationConfiguration> emailVerificationOptions,
+            IAppManager appManager, IAppNotificationManager appNotificationManager, IUserManager userManager,
+            IOptions<EmailVerificationConfiguration> emailVerificationOptions,
             IDocumentStore documentStore, IHttpContextAccessor httpContextAccessor)
         {
             _emailValidatorManager = emailValidatorManager;
             _platformConnectionManager = platformConnectionManager;
             _platformManager = platformManager;
             _appManager = appManager;
+            _appNotificationManager = appNotificationManager;
             _userManager = userManager;
             _emailVerificationConfiguration = emailVerificationOptions.Value;
             _documentStore = documentStore;
@@ -64,7 +67,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                     var appIds = prompt.PlatformIdToAppId.Values.SelectMany(v => v).Distinct();
                     var apps = await session.LoadAsync<App>(appIds, cancellationToken);
 
-                    var appIdsToNotify = new List<string>();
+                    
 
                     foreach (var platformId in prompt.PlatformIdToAppId.Keys)
                     {
@@ -73,23 +76,31 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                         {
                             platform = await _platformManager.GetPlatform(platformId, session, cancellationToken);
                         }
+                        else
+                        {
+                            continue;
+                        }
 
-                        
+                        var appIdsToNotify = new List<string>();
                         foreach (var appId in prompt.PlatformIdToAppId[platformId])
                         {
                             var app = apps[appId];
-                            if (platform != null)
-                            {
-                                await _platformConnectionManager.ConnectUserToEmailPlatform(platform.ExternalId, user,
-                                    app,
-                                    prompt.EmailAddress, _emailVerificationConfiguration.AcceptUrl,
-                                    _emailVerificationConfiguration.DeclineUrl, session, true, cancellationToken);
-                            }
+                            
+                            await _platformConnectionManager.ConnectUserToEmailPlatform(platform.ExternalId, user,
+                                app,
+                                prompt.EmailAddress, _emailVerificationConfiguration.AcceptUrl,
+                                _emailVerificationConfiguration.DeclineUrl, session, true, cancellationToken);
 
                             if (appIdsToNotify.All(aid => aid != appId))
                             {
                                 appIdsToNotify.Add(appId);
                             }
+                        }
+
+                        if (appIdsToNotify.Any())
+                        {
+                            await _appNotificationManager.NotifyPlatformConnectionDataUpdate(user.Id, appIdsToNotify, platform.Id,
+                                session, cancellationToken);
                         }
                     }
                 }
