@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
 using Raven.Client.Documents;
@@ -12,8 +13,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {
     public interface IEmailValidatorManager
     {
-        Task StartEmailValidation(string emailToValidate, User user, App app, string acceptUrl, string declineUrl,
-            IAsyncDocumentSession session, string platformId = "None", bool shouldResendPrompt = false,
+        Task StartEmailValidation(string emailToValidate, User user, App app,
+            PlatformDataClaim? platformDataClaim,
+            string acceptUrl, string declineUrl, IAsyncDocumentSession session, string platformId = "None",
             CancellationToken cancellationToken = default);
 
         Task<EmailPrompt> CompleteEmailValidation(Guid promptId, bool result, IAsyncDocumentSession session,
@@ -32,8 +34,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             _mailManager = mailManager;
         }
 
-        public async Task StartEmailValidation(string emailToValidate, User user, App app, string acceptUrl, string declineUrl,
-            IAsyncDocumentSession session, string platformId = "None", bool shouldResendPrompt = false,
+        public async Task StartEmailValidation(string emailToValidate, User user, App app,
+            PlatformDataClaim? platformDataClaim,
+            string acceptUrl, string declineUrl, IAsyncDocumentSession session, string platformId = "None",
             CancellationToken cancellationToken = default)
         {
             emailToValidate = emailToValidate.ToLowerInvariant();
@@ -51,23 +54,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 var unexpiredPrompt = existingPromptsForEmail.SingleOrDefault(p => !p.HasExpired());
                 if (unexpiredPrompt != null)
                 {
-                    if (shouldResendPrompt)
+                    if (!unexpiredPrompt.PlatformIdToAppId.ContainsKey(platformId))
                     {
-                        unexpiredPrompt.MarkAsExpired();
+                        unexpiredPrompt.PlatformIdToAppId.Add(platformId, new List<string>());
                     }
-                    else
+
+                    if (unexpiredPrompt.PlatformIdToAppId[platformId].All(appId => appId != app.Id))
                     {
-                        if (!unexpiredPrompt.PlatformIdToAppId.ContainsKey(platformId))
-                        {
-                            unexpiredPrompt.PlatformIdToAppId.Add(platformId, new List<string>());
-                        }
-
-                        if (unexpiredPrompt.PlatformIdToAppId[platformId].All(appId => appId != app.Id))
-                        {
-                            unexpiredPrompt.PlatformIdToAppId[platformId].Add(app.Id);
-                        }
-
-                        return;
+                        unexpiredPrompt.PlatformIdToAppId[platformId].Add(app.Id);
                     }
                 }
             }
@@ -81,7 +75,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             await _mailManager.SendConfirmEmailAddressMail(emailToValidate, acceptUrl, declineUrl);
 
             var createdPrompt = new EmailPrompt(promptId, user.Id, emailToValidate, expiresAt,
-                app.Id, platformId);
+                app.Id, platformId, platformDataClaim);
             await session.StoreAsync(createdPrompt, cancellationToken);
         }
 
@@ -94,12 +88,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 throw new EmailIsNotUserEmailException(email, user.ExternalId);
             }
 
-            var activePromptsForUserEndEmail = await session.Query<EmailPrompt>()
-                .Where(ep => ep.UserId == user.Id && ep.EmailAddress == email && !ep.HasExpired())
+            var allPromptsForUserEmail = await session.Query<EmailPrompt>()
+                .Where(ep => ep.UserId == user.Id && ep.EmailAddress == email)
                 .Take(1024)
                 .ToListAsync(cancellationToken);
 
-            foreach (var emailPrompt in activePromptsForUserEndEmail)
+            var activePromptsForUserEmail = allPromptsForUserEmail.Where(ue => !ue.HasExpired());
+
+            foreach (var emailPrompt in activePromptsForUserEmail)
             {
                 emailPrompt.MarkAsExpired();
             }

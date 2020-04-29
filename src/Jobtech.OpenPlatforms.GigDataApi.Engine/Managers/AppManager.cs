@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
 using Raven.Client.Documents;
@@ -14,8 +15,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
     {
         Task<App> CreateApp(string name, string dataUpdateCallbackUrl,
             string authorizationCallbackUrl,
-            string description, string logoUrl, string websiteUrl, IAsyncDocumentSession session,
-            bool isInactive = false,
+            string description, string logoUrl, string websiteUrl, PlatformDataClaim platformDataClaim,
+            IAsyncDocumentSession session, bool isInactive = false,
             CancellationToken cancellationToken = default);
 
         Task<App> GetAppFromApplicationId(Guid externalId, IAsyncDocumentSession session,
@@ -53,6 +54,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         Task SetWebsiteUrl(Guid externalId, string websiteUrl, IAsyncDocumentSession session,
             CancellationToken cancellationToken);
 
+        Task SetDefaultPlatformDataClaim(Guid externalId, PlatformDataClaim platformDataClaim, IAsyncDocumentSession session,
+            CancellationToken cancellationToken);
+
         Task<string> RotateSecret(Guid externalId, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default);
     }
@@ -65,8 +69,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
         public async Task<App> CreateApp(string name, string dataUpdateCallbackUrl,
             string authorizationCallbackUrl,
-            string description, string logoUrl, string websiteUrl, IAsyncDocumentSession session,
-            bool isInactive = false,
+            string description, string logoUrl, string websiteUrl, PlatformDataClaim platformDataClaim, 
+            IAsyncDocumentSession session, bool isInactive = false,
             CancellationToken cancellationToken = default)
         {
             dataUpdateCallbackUrl = string.IsNullOrWhiteSpace(dataUpdateCallbackUrl) ? null : dataUpdateCallbackUrl;
@@ -75,7 +79,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 : authorizationCallbackUrl;
 
             var app = new App(name, Guid.NewGuid(), Guid.NewGuid().ToString(), dataUpdateCallbackUrl,
-                authorizationCallbackUrl, description, logoUrl, websiteUrl, isInactive);
+                authorizationCallbackUrl, description, logoUrl, websiteUrl, platformDataClaim, isInactive);
             await session.StoreAsync(app, cancellationToken);
             return app;
         }
@@ -181,6 +185,13 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         {
             var app = await GetAppFromApplicationId(externalId, session, cancellationToken);
             app.WebsiteUrl = websiteUrl;
+        }
+
+        public async Task SetDefaultPlatformDataClaim(Guid externalId, PlatformDataClaim platformDataClaim, IAsyncDocumentSession session,
+            CancellationToken cancellationToken)
+        {
+            var app = await GetAppFromApplicationId(externalId, session, cancellationToken);
+            app.DefaultPlatformDataClaim = platformDataClaim;
         }
 
         public async Task<string> RotateSecret(Guid externalId, IAsyncDocumentSession session,

@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -50,7 +51,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
 
             return new AppInfoViewModel(app.Name, app.DataUpdateCallbackUrl,
                 app.AuthorizationCallbackUrl,
-                app.SecretKey, app.ExternalId.ToString(), app.WebsiteUrl);
+                app.SecretKey, app.ExternalId.ToString(), app.WebsiteUrl, app.DefaultPlatformDataClaim);
         }
 
         /// <summary>
@@ -70,13 +71,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
             using var session = _documentStore.OpenAsyncSession();
             var createdApp = await _appManager.CreateApp(model.Name, model.DataUpdateCallbackUrl,
                 model.AuthorizationCallbackUrl, model.Description, model.LogoUrl,
-                model.WebsiteUrl, session, true, cancellationToken);
+                model.WebsiteUrl, model.DefaultPlatformDataClaim ?? PlatformDataClaim.Aggregated, session, true,
+                cancellationToken);
 
             await session.SaveChangesAsync(cancellationToken);
 
             return new AppInfoViewModel(createdApp.Name, createdApp.DataUpdateCallbackUrl,
                 createdApp.AuthorizationCallbackUrl,
-                createdApp.SecretKey, createdApp.ExternalId.ToString(), createdApp.WebsiteUrl);
+                createdApp.SecretKey, createdApp.ExternalId.ToString(), createdApp.WebsiteUrl, createdApp.DefaultPlatformDataClaim);
         }
 
         /// <summary>
@@ -206,6 +208,27 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
         }
 
         /// <summary>
+        /// Set the default platform data claim
+        /// </summary>
+        /// <param name="adminKey">The admin key</param>
+        /// <param name="applicationId">The application id</param>
+        /// <param name="model">The default platform data claim data</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        [HttpPatch("{applicationId}/set-default-platform-data-claim")]
+        public async Task<IActionResult> SetDefaultPlatformDataClaim([FromHeader(Name = "admin-key")] Guid adminKey,
+            Guid applicationId, [FromBody] AppDefaultPlatformDataClaimUpdateModel model, CancellationToken cancellationToken)
+        {
+            ValidateAdminKey(adminKey);
+
+            using var session = _documentStore.OpenAsyncSession();
+            await _appManager.SetDefaultPlatformDataClaim(applicationId, model.DefaultPlatformDataClaim, session,
+                cancellationToken);
+            await session.SaveChangesAsync(cancellationToken);
+            return Ok("Default platform data claim updated");
+        }
+
+        /// <summary>
         /// Rotate the app secret
         /// </summary>
         /// <param name="adminKey"></param>
@@ -274,7 +297,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
     {
         public AppInfoViewModel(string name, string dataUpdateCallbackUrl,
             string authorizationCallbackUrl, string secretKey,
-            string applicationId, string websiteUrl)
+            string applicationId, string websiteUrl, PlatformDataClaim defaultPlatformDataClaim)
         {
             Name = name;
             DataUpdateCallbackUrl = dataUpdateCallbackUrl;
@@ -282,6 +305,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
             SecretKey = secretKey;
             ApplicationId = applicationId;
             WebsiteUrl = websiteUrl;
+            DefaultPlatformDataClaim = defaultPlatformDataClaim;
         }
 
         public string Name { get; private set; }
@@ -290,6 +314,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
         public string SecretKey { get; private set; }
         public string ApplicationId { get; private set; }
         public string WebsiteUrl { get; private set; }
+        public PlatformDataClaim DefaultPlatformDataClaim { get; private set; }
     }
 
     public class AppSecretViewModel
@@ -310,6 +335,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
         [MaxLength(1024)] public string Description { get; set; }
         [MaxLength(2048)] public string LogoUrl { get; set; }
         [MaxLength(2048)] public string WebsiteUrl { get; set; }
+        /// <summary>
+        /// If not set the app will by default have platform data claim Aggregated.
+        /// </summary>
+        public PlatformDataClaim? DefaultPlatformDataClaim { get; set; }
     }
 
     public class AppEndpointUpdateModel
@@ -335,5 +364,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers.Admin
     public class AppWebsiteUrlUpdateModel
     {
         [MaxLength(2048)] public string WebsiteUrl { get; set; }
+    }
+
+    public class AppDefaultPlatformDataClaimUpdateModel
+    {
+        [Required] public PlatformDataClaim DefaultPlatformDataClaim { get; set; }
     }
 }

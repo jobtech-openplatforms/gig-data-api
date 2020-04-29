@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,7 +33,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             using var session = _documentStore.OpenAsyncSession();
             var app = await _appManager.GetAppFromApplicationId(applicationId, session, cancellationToken);
             return new AppViewModel(app.ExternalId.ToString(), app.Name, app.Description, app.LogoUrl, app.WebsiteUrl,
-                app.AuthorizationCallbackUrl);
+                app.AuthorizationCallbackUrl, app.DefaultPlatformDataClaim);
         }
 
         [HttpGet("available")]
@@ -44,7 +45,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             using var session = _documentStore.OpenAsyncSession();
             var apps = await _appManager.GetAllActiveApps(page, pageSize, session, cancellationToken);
             return apps.Select(a => new AppViewModel(a.ExternalId.ToString(), a.Name, a.Description, a.LogoUrl,
-                    a.WebsiteUrl, a.AuthorizationCallbackUrl))
+                    a.WebsiteUrl, a.AuthorizationCallbackUrl, a.DefaultPlatformDataClaim))
                 .ToList();
         }
 
@@ -53,7 +54,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
     public class AppViewModel
     {
-        public AppViewModel(string applicationId, string name, string description, string logoUrl, string websiteUrl, string authorizationCallbackUrl)
+        public AppViewModel(string applicationId, string name, string description, string logoUrl, string websiteUrl,
+            string authorizationCallbackUrl, PlatformDataClaim defaultPlatformDataClaim)
         {
             ApplicationId = applicationId;
             Name = name;
@@ -61,6 +63,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             LogoUrl = logoUrl;
             WebsiteUrl = websiteUrl;
             AuthorizationCallbackUrl = authorizationCallbackUrl;
+            DefaultPlatformDataClaim = defaultPlatformDataClaim;
         }
 
         public string ApplicationId { get; private set; }
@@ -69,5 +72,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         public string LogoUrl { get; private set; }
         public string WebsiteUrl { get; private set; }
         public string AuthorizationCallbackUrl { get; private set; }
+        public PlatformDataClaim DefaultPlatformDataClaim { get; private set; }
     }
 }

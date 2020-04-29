@@ -14,4 +14,10 @@
         Synced,
         Removed
     }
+
+    public enum PlatformDataClaim
+    {
+        Aggregated,
+        Full
+    }
 }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Api.Configuration;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
 using Microsoft.AspNetCore.Authorization;
@@ -85,11 +86,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                         foreach (var appId in prompt.PlatformIdToAppId[platformId])
                         {
                             var app = apps[appId];
-                            
+
                             await _platformConnectionManager.ConnectUserToEmailPlatform(platform.ExternalId, user,
                                 app,
                                 prompt.EmailAddress, _emailVerificationConfiguration.AcceptUrl,
-                                _emailVerificationConfiguration.DeclineUrl, session, true, cancellationToken);
+                                _emailVerificationConfiguration.DeclineUrl, prompt.PlatformDataClaim, session, true,
+                                cancellationToken);
 
                             if (appIdsToNotify.All(aid => aid != appId))
                             {
@@ -138,30 +140,27 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
             var existingUserEmail = user.UserEmails.SingleOrDefault(ue => ue.Email == emailToValidate);
 
-            if (existingUserEmail != null)
+            if (existingUserEmail == null)
             {
-                if (existingUserEmail.UserEmailState == UserEmailState.Verified)
-                {
-                    return UserEmailState.Verified;
-                }
-
-                if (model.ResendValidationMail)
-                {
-                    await _emailValidatorManager.StartEmailValidation(emailToValidate, user, app,
-                        _emailVerificationConfiguration.AcceptUrl, _emailVerificationConfiguration.DeclineUrl, session,
-                        "None", true, cancellationToken);
-                    await session.SaveChangesAsync(cancellationToken);
-                    return UserEmailState.AwaitingVerification;
-                }
-
-                return existingUserEmail.UserEmailState;
+                await _emailValidatorManager.StartEmailValidation(model.Email, user, app, null,
+                    _emailVerificationConfiguration.AcceptUrl, _emailVerificationConfiguration.DeclineUrl, session, "None",
+                    cancellationToken);
+                await session.SaveChangesAsync(cancellationToken);
+                return UserEmailState.AwaitingVerification;
             }
 
-            await _emailValidatorManager.StartEmailValidation(model.Email, user, app,
+            if (existingUserEmail.UserEmailState == UserEmailState.Verified)
+                return existingUserEmail.UserEmailState;
+
+            await _emailValidatorManager.ExpireAllActiveEmailValidationsForUserEmail(existingUserEmail.Email,
+                user, session, cancellationToken);
+
+            await _emailValidatorManager.StartEmailValidation(emailToValidate, user, app, null,
                 _emailVerificationConfiguration.AcceptUrl, _emailVerificationConfiguration.DeclineUrl, session,
-                cancellationToken: cancellationToken);
+                "None", cancellationToken);
             await session.SaveChangesAsync(cancellationToken);
-            return UserEmailState.AwaitingVerification;
+
+            return existingUserEmail.UserEmailState;
         }
     }
 
@@ -178,7 +177,5 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         /// </summary>
         [Required, EmailAddress]
         public string Email { get; set; }
-
-        public bool ResendValidationMail { get; set; }
     }
 }

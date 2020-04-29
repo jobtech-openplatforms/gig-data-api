@@ -59,7 +59,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             var app = await _appManager.GetAppFromApplicationId(model.ApplicationId, session, cancellationToken);
 
             var authorizationResult = await _platformConnectionManager.StartConnectUserToOauthPlatform(model.PlatformId,
-                existingUser, app,
+                existingUser, app, model.PlatformDataClaim,
                 model.CallbackUri, session, cancellationToken);
 
             await session.SaveChangesAsync(cancellationToken);
@@ -115,7 +115,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             var result = await _platformConnectionManager.ConnectUserToEmailPlatform(model.PlatformId, existingUser,
                 app,
                 model.PlatformUserEmailAddress, _emailVerificationConfiguration.AcceptUrl,
-                _emailVerificationConfiguration.DeclineUrl,
+                _emailVerificationConfiguration.DeclineUrl, model.PlatformDataClaim,
                 session, cancellationToken: cancellationToken);
 
             await session.SaveChangesAsync(cancellationToken);
@@ -128,6 +128,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
     {
         [Required] public Guid PlatformId { get; set; }
         [Required] public Guid ApplicationId { get; set; }
+        public PlatformDataClaim? PlatformDataClaim { get; set; }
     }
 
     public class StartPlatformConnectionOauthModel : StartPlatformConnectionModelBase

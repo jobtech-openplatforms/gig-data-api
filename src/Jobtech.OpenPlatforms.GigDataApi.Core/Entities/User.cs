@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities.Base;
 using Jobtech.OpenPlatforms.GigDataApi.Core.OAuth;
 
@@ -176,12 +177,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
             Created = DateTimeOffset.UtcNow;
         }
 
-        public NotificationInfo(string appId): this()
+        public NotificationInfo(string appId, PlatformDataClaim platformDataClaim): this()
         {
             AppId = appId;
+            PlatformDataClaim = platformDataClaim;
         }
 
         public string AppId { get; private set; }
+        public PlatformDataClaim PlatformDataClaim { get; set; }
         public DateTimeOffset Created { get; private set; }
     }
 

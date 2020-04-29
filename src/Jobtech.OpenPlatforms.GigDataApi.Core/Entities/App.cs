@@ -1,4 +1,5 @@
 ﻿using System;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities.Base;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
@@ -10,7 +11,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
         }
 
         public App(string name, Guid externalId, string secretKey, string dataUpdateCallbackUrl,
-            string authorizationCallbackUrl, string description, string logoUrl, string websiteUrl,
+            string authorizationCallbackUrl, string description, string logoUrl, string websiteUrl, PlatformDataClaim defaultPlatformDataClaim,
             bool isInactive = false) : this()
         {
             Name = name;
@@ -21,6 +22,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
             Description = description;
             LogoUrl = logoUrl;
             WebsiteUrl = websiteUrl;
+            DefaultPlatformDataClaim = defaultPlatformDataClaim;
             IsInactive = isInactive;
         }
 
@@ -33,5 +35,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
         public string Description { get; set; }
         public string LogoUrl { get; set; }
         public string WebsiteUrl { get; set; }
+        public PlatformDataClaim DefaultPlatformDataClaim { get; set; }
     }
 }

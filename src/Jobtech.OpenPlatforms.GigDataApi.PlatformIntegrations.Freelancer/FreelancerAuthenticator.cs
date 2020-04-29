@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core.OAuth;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer.Clients;
@@ -43,10 +44,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
             
         }
 
-        public string GetAuthorizationUrl(Guid userId, string redirectUrl, Guid applicationId)
+        public string GetAuthorizationUrl(Guid userId, string redirectUrl, Guid applicationId, PlatformDataClaim? platformDataClaim)
         {
 
-            var state = new OAuthState(userId, redirectUrl, applicationId);
+            var state = new OAuthState(userId, redirectUrl, applicationId, platformDataClaim);
 
             var stateString = JsonConvert.SerializeObject(state);
 
@@ -83,7 +84,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
 
             var state = JsonConvert.DeserializeObject<OAuthState>(stateStr);
 
-            return new OAuthCompleteResult(state.RedirectUrl, state.UserId, state.ApplicationId, token);
+            return new OAuthCompleteResult(state.RedirectUrl, state.UserId, state.ApplicationId, token, state.PlatformDataClaim);
         }
 
         public async Task<OAuthAccessToken> RefreshToken(OAuthAccessToken token)
@@ -116,15 +117,17 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
 
     public class OAuthState
     {
-        public OAuthState(Guid userId, string redirectUrl, Guid applicationId)
+        public OAuthState(Guid userId, string redirectUrl, Guid applicationId, PlatformDataClaim? platformDataClaim)
         {
             UserId = userId;
             RedirectUrl = redirectUrl;
             ApplicationId = applicationId;
+            PlatformDataClaim = platformDataClaim;
         }
 
         public Guid UserId { get; set; }
         public string RedirectUrl { get; set; }
         public Guid ApplicationId { get; set; }
+        public PlatformDataClaim? PlatformDataClaim { get; set; }
     }
 }

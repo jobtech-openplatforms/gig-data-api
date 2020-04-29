@@ -96,12 +96,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             var notificationReason = message.Reason;
             var platformConnectionState = message.PlatformConnectionState;
+            PlatformDataClaim? platformDataClaim = null;
 
             if (notificationReason != NotificationReason.ConnectionDeleted)
             {
                 if (platformConnectionState == PlatformConnectionState.Connected || platformConnectionState == PlatformConnectionState.Synced)
                 {
-                    var activePlatformConnection = user.PlatformConnections.SingleOrDefault(pc => pc.PlatformId == message.PlatformId && !pc.ConnectionInfo.IsDeleted);
+                    var activePlatformConnection = user.PlatformConnections.SingleOrDefault(pc =>
+                        pc.PlatformId == message.PlatformId && !pc.ConnectionInfo.IsDeleted);
                     if (activePlatformConnection == null)
                     {
                         _logger.LogWarning(
@@ -122,6 +124,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
                             notificationReason = NotificationReason.ConnectionDeleted;
                             platformConnectionState = PlatformConnectionState.Removed;
                         }
+                        else
+                        {
+                            platformDataClaim = notificationInfoForApp.PlatformDataClaim;
+                        }
                     }
                 }
             }
@@ -135,7 +141,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
             }
 
             var updatePayload = CreatePayload(platform.ExternalId, user.ExternalId, app.SecretKey, platform.Name,
-                platformConnectionState, DateTimeOffset.UtcNow, notificationReason, platformData);
+                platformConnectionState, DateTimeOffset.UtcNow, notificationReason, platformData, platformDataClaim);
 
             if (string.IsNullOrWhiteSpace(app.DataUpdateCallbackUrl))
             {
@@ -220,7 +226,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
         private static PlatformConnectionUpdateNotificationPayload CreatePayload(Guid externalPlatformId, Guid externalUserId,
             string appSecret, string platformName, PlatformConnectionState platformConnectionState,
-            DateTimeOffset updated, NotificationReason notificationReason, PlatformData platformData = null)
+            DateTimeOffset updated, NotificationReason notificationReason, PlatformData platformData = null, 
+            PlatformDataClaim? platformDataClaim = null)
         {
             var payload = new PlatformConnectionUpdateNotificationPayload
             {
@@ -235,6 +242,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             if (platformData != null)
             {
+                //if no platform data claim is provided, set to lowest claim by default
+                platformDataClaim ??= PlatformDataClaim.Aggregated;
+
                 var platformDataPayload = new PlatformDataPayload
                 {
                     NumberOfGigs = platformData.NumberOfGigs,
@@ -258,70 +268,72 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
                             r.Value >= r.SuccessLimit);
                 }
 
-
-                if (platformData.Reviews != null)
+                if (platformDataClaim == PlatformDataClaim.Full)
                 {
-                    var reviewPayloads = new List<PlatformReviewPayload>();
-                    foreach (var platformDataReview in platformData.Reviews
-                    )
+                    if (platformData.Reviews != null)
                     {
-                        var platformReviewPayload = new PlatformReviewPayload
+                        var reviewPayloads = new List<PlatformReviewPayload>();
+                        foreach (var platformDataReview in platformData.Reviews
+                        )
                         {
-                            ReviewId = platformDataReview.ReviewIdentifier,
-                            ReviewDate = platformDataReview.ReviewDate,
-                            ReviewerName = platformDataReview.ReviewerName,
-                            ReviewText = platformDataReview.ReviewText,
-                            ReviewHeading = platformDataReview.ReviewHeading,
-                            ReviewerAvatarUri = platformDataReview.ReviewerAvatarUri
-                        };
-
-                        if (platformDataReview.RatingId.HasValue)
-                        {
-                            platformReviewPayload.Rating = new PlatformRatingPayload(
-                                platformData.Ratings?.Single(r =>
-                                    r.Identifier == platformDataReview.RatingId));
-                        }
-
-                        reviewPayloads.Add(platformReviewPayload);
-                    }
-
-                    if (reviewPayloads.Any())
-                    {
-                        platformDataPayload.Reviews = reviewPayloads;
-                    }
-                }
-
-                if (platformData.Achievements != null)
-                {
-                    var achievementPayloads = new List<PlatformAchievementPayload>();
-
-                    foreach (var platformDataAchievement in platformData.Achievements)
-                    {
-                        PlatformAchievementScorePayload scorePayload = null;
-                        if (platformDataAchievement.Score != null)
-                        {
-                            scorePayload = new PlatformAchievementScorePayload
+                            var platformReviewPayload = new PlatformReviewPayload
                             {
-                                Value = platformDataAchievement.Score.Value,
-                                Label = platformDataAchievement.Score.Label
+                                ReviewId = platformDataReview.ReviewIdentifier,
+                                ReviewDate = platformDataReview.ReviewDate,
+                                ReviewerName = platformDataReview.ReviewerName,
+                                ReviewText = platformDataReview.ReviewText,
+                                ReviewHeading = platformDataReview.ReviewHeading,
+                                ReviewerAvatarUri = platformDataReview.ReviewerAvatarUri
                             };
+
+                            if (platformDataReview.RatingId.HasValue)
+                            {
+                                platformReviewPayload.Rating = new PlatformRatingPayload(
+                                    platformData.Ratings?.Single(r =>
+                                        r.Identifier == platformDataReview.RatingId));
+                            }
+
+                            reviewPayloads.Add(platformReviewPayload);
                         }
 
-                        var platformAchievementPayload = new PlatformAchievementPayload
+                        if (reviewPayloads.Any())
                         {
-                            AchievementId = platformDataAchievement.AchievementIdentifier,
-                            AchievementPlatformType = platformDataAchievement.AchievementPlatformType,
-                            AchievementType = platformDataAchievement.AchievementType,
-                            Description = platformDataAchievement.Description,
-                            ImageUrl = platformDataAchievement.ImageUri,
-                            Name = platformDataAchievement.Name,
-                            Score = scorePayload
-                        };
-
-                        achievementPayloads.Add(platformAchievementPayload);
+                            platformDataPayload.Reviews = reviewPayloads;
+                        }
                     }
 
-                    platformDataPayload.Achievements = achievementPayloads;
+                    if (platformData.Achievements != null)
+                    {
+                        var achievementPayloads = new List<PlatformAchievementPayload>();
+
+                        foreach (var platformDataAchievement in platformData.Achievements)
+                        {
+                            PlatformAchievementScorePayload scorePayload = null;
+                            if (platformDataAchievement.Score != null)
+                            {
+                                scorePayload = new PlatformAchievementScorePayload
+                                {
+                                    Value = platformDataAchievement.Score.Value,
+                                    Label = platformDataAchievement.Score.Label
+                                };
+                            }
+
+                            var platformAchievementPayload = new PlatformAchievementPayload
+                            {
+                                AchievementId = platformDataAchievement.AchievementIdentifier,
+                                AchievementPlatformType = platformDataAchievement.AchievementPlatformType,
+                                AchievementType = platformDataAchievement.AchievementType,
+                                Description = platformDataAchievement.Description,
+                                ImageUrl = platformDataAchievement.ImageUri,
+                                Name = platformDataAchievement.Name,
+                                Score = scorePayload
+                            };
+
+                            achievementPayloads.Add(platformAchievementPayload);
+                        }
+
+                        platformDataPayload.Achievements = achievementPayloads;
+                    }
                 }
 
                 payload.PlatformData = platformDataPayload;
