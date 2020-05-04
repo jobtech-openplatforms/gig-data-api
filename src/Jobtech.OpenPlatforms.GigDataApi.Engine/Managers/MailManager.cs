@@ -35,7 +35,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             var messageBody =
                 $"OpenPlatforms.org would like to verify that the email address <b>{emailAddressToConfirm}</b> is controlled by you. <br/><br/>" +
                 $"If you initiated the verification process from OpenPlatforms.org please click on the following link to verify ownership: <a href=\"{acceptUrl}\">Verify</a>.<br/><br/>" +
-                $"If you did not initiate the verification process or if you do not want to proceed with the verifications, click the following link: <a href=\"{declineUrl}\">Don't verify</a>.<br/><br/>" +
                 $"Greetings from OpenPlatform.org";
 
             await SendMail("verify@openplatforms.org", emailAddressToConfirm, subject, messageBody, true);
