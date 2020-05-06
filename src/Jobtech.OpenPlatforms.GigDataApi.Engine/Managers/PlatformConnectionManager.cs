@@ -11,6 +11,7 @@ using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents.Session;
+using Rebus.Bus;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {
@@ -40,11 +41,13 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         private readonly IEmailValidatorManager _emailValidatorManager;
         private readonly IAppManager _appManager;
         private readonly IAppNotificationManager _appNotificationManager;
+        private readonly IBus _bus;
         private readonly ILogger<PlatformConnectionManager> _logger;
 
         public PlatformConnectionManager(IPlatformManager platformManager, IUserManager userManager,
             IFreelancerAuthenticator freelancerAuthenticator, IEmailValidatorManager emailValidatorManager,
             IAppManager appManager, IAppNotificationManager appNotificationManager,
+            IBus bus,
             ILogger<PlatformConnectionManager> logger)
         {
             _platformManager = platformManager;
@@ -53,6 +56,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             _emailValidatorManager = emailValidatorManager;
             _appManager = appManager;
             _appNotificationManager = appNotificationManager;
+            _bus = bus;
             _logger = logger;
         }
 
@@ -245,7 +249,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                     //TODO: call AF.CVData.PlatformIntegrations.GigDataPlatform to start connection there
                     await _appNotificationManager.NotifyPlatformConnectionDataUpdate(user.Id, new List<string> {app.Id},
                         platform.Id, session, cancellationToken);
-                    await HandleEmailValidationCompletion(platform.Id, user, app, userPlatformEmailAddress, platformDataClaim, session,
+                    await HandleEmailValidationCompletion(platform.Id, platform.IntegrationType, user, app,
+                        userPlatformEmailAddress, platformDataClaim, session,
                         cancellationToken);
                     return new PlatformConnectionStartResult(PlatformConnectionState.Connected);
                 case PlatformIntegrationType.Manual:
@@ -345,11 +350,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                     platform.DataPollIntervalInSeconds);
                 platformConnection.ConnectionInfo.NotificationInfos.Add(new NotificationInfo(app.Id,
                     oAuthCompleteResult.PlatformDataClaim ?? app.DefaultPlatformDataClaim));
-
+                
                 user.PlatformConnections.Add(platformConnection);
+                await _platformManager.TriggerDataFetch(user.Id, platformConnection, platform.IntegrationType,
+                    _bus);
             }
-
-            await session.SaveChangesAsync(cancellationToken);
 
             await _appNotificationManager.NotifyPlatformConnectionDataUpdate(user.Id, new List<string> {app.Id},
                 platform.Id, session, cancellationToken);
@@ -357,7 +362,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             return GetRedirectUrl(oAuthCompleteResult.RedirectUrl, platform.ExternalId);
         }
 
-        private async Task HandleEmailValidationCompletion(string platformId, User user, App app,
+        private async Task HandleEmailValidationCompletion(string platformId, PlatformIntegrationType platformIntegrationType, User user, App app,
             string userPlatformEmailAddress, PlatformDataClaim? platformDataClaim, IAsyncDocumentSession session,
             CancellationToken cancellationToken)
         {
@@ -405,6 +410,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             var platformConnection = new PlatformConnection(platform.Id, platform.Name, platform.ExternalId,
                 emailConnectionInfo, platform.DataPollIntervalInSeconds);
             user.PlatformConnections.Add(platformConnection);
+            await _platformManager.TriggerDataFetch(user.Id, platformConnection, platformIntegrationType, _bus);
         }
 
         private string GetRedirectUrl(string originalRedirectUrl, Guid externalPlatformId)

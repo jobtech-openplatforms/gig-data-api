@@ -95,41 +95,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             return new AuthEndpointInfoViewModel {Url = url};
         }
 
-        //[HttpPost("add-validated-email-address")]
-        //[AllowAnonymous]
-        //public async Task<IActionResult> AddValidatedEmailAddress([FromHeader(Name = "app_secret")] string appSecret,
-        //    [FromBody] ValidatedEmailModel model, CancellationToken cancellationToken)
-        //{
-        //    using var session = _documentStore.OpenAsyncSession();
-        //    var user = await _userManager.GetUserByExternalId(model.UserId, session, cancellationToken);
-        //    var app = await _appManager.GetAppFromSecretKey(appSecret, session, cancellationToken);
-
-        //    var existingUserEmail =
-        //        user.UserEmails.SingleOrDefault(ue => ue.Email == model.Email.ToLowerInvariant());
-
-        //    if (existingUserEmail != null)
-        //    {
-        //        if (existingUserEmail.UserEmailState != UserEmailState.Verified)
-        //        {
-        //            existingUserEmail.SetEmailState(UserEmailState.Verified);
-        //            existingUserEmail.IsVerifiedFromApp = true;
-        //            existingUserEmail.VerifyingAppId = app.Id;
-        //        }
-        //    }
-        //    else
-        //    {
-        //        var newUserEmail = new UserEmail(model.Email.ToLowerInvariant(), UserEmailState.Verified)
-        //        {
-        //            IsVerifiedFromApp = true, VerifyingAppId = app.Id
-        //        };
-        //        user.UserEmails.Add(newUserEmail);
-        //    }
-
-        //    await session.SaveChangesAsync(cancellationToken);
-
-        //    return Ok("Email address added");
-        //}
-
         [HttpGet]
         [Produces("application/json")]
         public async Task<ActionResult<UserViewModel>> GetUser(CancellationToken cancellationToken)

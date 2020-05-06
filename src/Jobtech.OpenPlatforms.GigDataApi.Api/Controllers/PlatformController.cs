@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
+using Rebus.Bus;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 {
@@ -34,13 +35,15 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         private readonly IUserManager _userManager;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly Options _options;
+        private readonly IBus _bus;
         private readonly ILogger<PlatformController> _logger;
 
         public PlatformController(IDocumentStore documentStore, IPlatformManager platformManager,
             IPlatformDataManager platformDataManager,
             IAppManager appManager, IAppNotificationManager appNotificationManager,
             IPlatformConnectionManager platformConnectionManager, IUserManager userManager,
-            IHttpContextAccessor httpContextAccessor, IOptions<Options> options, ILogger<PlatformController> logger)
+            IHttpContextAccessor httpContextAccessor, IOptions<Options> options, 
+            IBus bus, ILogger<PlatformController> logger)
         {
             _documentStore = documentStore;
             _platformManager = platformManager;
@@ -51,6 +54,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             _userManager = userManager;
             _httpContextAccessor = httpContextAccessor;
             _options = options.Value;
+            _bus = bus;
             _logger = logger;
         }
 
@@ -275,15 +279,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpPost("{platformId}/initiate-data-fetch")]
-        public async Task<IActionResult> InitiateDataFetch(Guid platformId,
-            [FromBody, Required] InitiateDataFetchModel model, CancellationToken cancellationToken)
+        public async Task<IActionResult> InitiateDataFetch(Guid platformId, CancellationToken cancellationToken)
         {
             var uniqueUserIdentifier = _httpContextAccessor.HttpContext.User.Identity.Name;
 
             using var session = _documentStore.OpenAsyncSession();
             var user = await _userManager.GetOrCreateUserIfNotExists(uniqueUserIdentifier, session, cancellationToken);
             var platform = await _platformManager.GetPlatformByExternalId(platformId, session, cancellationToken);
-            await session.SaveChangesAsync(cancellationToken);
+            
 
             var platformConnection = user.PlatformConnections.SingleOrDefault(pc => pc.PlatformId == platform.Id);
 
@@ -292,6 +295,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                 throw new UserPlatformConnectionDoesNotExistException(platform.ExternalId,
                     $"User with id {user.ExternalId} does not have access to platform");
             }
+
+            await _platformManager.TriggerDataFetch(user.Id, platformConnection, platform.IntegrationType, _bus);
+
+            await session.SaveChangesAsync(cancellationToken);
 
             //temp
             return Ok();

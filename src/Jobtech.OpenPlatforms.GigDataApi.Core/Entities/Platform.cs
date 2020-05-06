@@ -1,4 +1,5 @@
 ﻿using System;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities.Base;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
@@ -51,13 +52,5 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
         public decimal MinRating { get; private set; }
         public decimal MaxRating { get; private set; }
         public decimal SuccessLimit { get; private set; }
-    }
-
-    public enum PlatformIntegrationType {
-        FreelancerIntegration,
-        UpworkIntegration,
-        AirbnbIntegration,
-        GigDataPlatformIntegration,
-        Manual
     }
 }

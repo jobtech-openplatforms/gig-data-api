@@ -20,4 +20,13 @@
         Aggregated,
         Full
     }
+
+    public enum PlatformIntegrationType
+    {
+        FreelancerIntegration,
+        UpworkIntegration,
+        AirbnbIntegration,
+        GigDataPlatformIntegration,
+        Manual
+    }
 }

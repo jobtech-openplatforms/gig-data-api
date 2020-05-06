@@ -125,7 +125,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
                         }
 
                         var existingUserEmail = user.UserEmails.SingleOrDefault(ue =>
-                            ue.Email.ToLowerInvariant() == userInfo.Email.ToLowerInvariant());
+                            string.Equals(ue.Email, userInfo.Email, StringComparison.InvariantCultureIgnoreCase));
 
                         if (existingUserEmail == null) //email does not exist at all
                         {
@@ -153,6 +153,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
                         t.UseAzureServiceBusAsOneWayClient(
                             serviceBusConnectionString))
                     .Routing(r => r.TypeBased()
+                        .Map<FetchDataForPlatformConnectionMessage>("platformdatafetcher.input")
                         .Map<PlatformConnectionUpdateNotificationMessage>("platformdatafetcher.input")
                     ));
 

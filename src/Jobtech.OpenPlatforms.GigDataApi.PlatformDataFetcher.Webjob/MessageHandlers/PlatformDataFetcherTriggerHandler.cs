@@ -7,9 +7,7 @@ using Jobtech.OpenPlatforms.GigDataApi.Common.Extensions;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
-using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Extensions;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Indexes;
-using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Messages;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
@@ -76,11 +74,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
                     _logger.LogInformation(
                         "Will trigger data fetch for platform. LastSuccessfulDataFetch: {LastSuccessfulDataFetch}", platformConnection.LastSuccessfulDataFetch);
 
-                    platformConnection.MarkAsDataFetchStarted();
                     var platform = platforms[platformConnection.PlatformId];
-                    var fetchDataMessage = new FetchDataForPlatformConnectionMessage(userId,
-                        platformConnection.PlatformId, platform.IntegrationType);
-                    await _bus.SendLocal(fetchDataMessage);
+                    await _platformManager.TriggerDataFetch(userId, platformConnection, platform.IntegrationType, _bus);
                 }
             }
 

@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
+using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.Core;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Rebus.Bus;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {
@@ -31,6 +34,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
         Task<IList<Platform>> GetAllPlatforms(IAsyncDocumentSession session,
             CancellationToken cancellationToken = default);
+
+        Task TriggerDataFetch(string userId, PlatformConnection platformConnection,
+            PlatformIntegrationType platformIntegrationType, IBus bus);
 
     }
 
@@ -104,6 +110,15 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             CancellationToken cancellationToken = default)
         {
             return await session.Query<Platform>().Where(p => !p.IsInactive).ToListAsync(cancellationToken);
+        }
+
+        public async Task TriggerDataFetch(string userId, PlatformConnection platformConnection,
+            PlatformIntegrationType platformIntegrationType, IBus bus)
+        {
+            platformConnection.MarkAsDataFetchStarted();
+            var fetchDataMessage = new FetchDataForPlatformConnectionMessage(userId,
+                platformConnection.PlatformId, platformIntegrationType);
+            await bus.Send(fetchDataMessage);
         }
     }
 }

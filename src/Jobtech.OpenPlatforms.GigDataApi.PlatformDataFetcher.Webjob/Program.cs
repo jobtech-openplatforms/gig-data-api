@@ -111,6 +111,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                         })
                         .Logging(l => l.Serilog())
                         .Routing(r => r.TypeBased()
+                            .Map<FetchDataForPlatformConnectionMessage>(inputQueueName)
                             .Map<PlatformConnectionUpdateNotificationMessage>(inputQueueName))
 
                 );

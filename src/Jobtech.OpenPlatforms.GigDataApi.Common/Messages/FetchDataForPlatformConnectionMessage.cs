@@ -1,6 +1,4 @@
-﻿using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
-
-namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Messages
+﻿namespace Jobtech.OpenPlatforms.GigDataApi.Common.Messages
 {
     public class FetchDataForPlatformConnectionMessage
     {

@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Exceptions;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Extensions;
+using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Configuration;
-using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform;
 using Microsoft.Extensions.Logging;
