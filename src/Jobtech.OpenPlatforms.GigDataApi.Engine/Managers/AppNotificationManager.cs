@@ -22,6 +22,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
         Task NotifyPlatformConnectionRemoved(string userId, IList<string> appIds, string platformId,
             IAsyncDocumentSession session, CancellationToken cancellationToken = default);
+
+        Task NotifyPlatformConnectionSynced(string userId, IList<string> appIds, string platformId,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default);
     }
 
     public class AppNotificationManager : IAppNotificationManager
@@ -59,6 +62,13 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
             await NotifyPlatformDataUpdate(userId, appIds, platformId, session, PlatformConnectionState.Removed,
+                cancellationToken);
+        }
+
+        public async Task NotifyPlatformConnectionSynced(string userId, IList<string> appIds, string platformId,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
+        {
+            await NotifyPlatformDataUpdate(userId, appIds, platformId, session, PlatformConnectionState.Synced,
                 cancellationToken);
         }
 

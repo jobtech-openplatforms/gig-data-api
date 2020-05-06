@@ -67,7 +67,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             await session.SaveChangesAsync(cancellationToken);
 
-            await _appNotificationManager.NotifyPlatformConnectionDataUpdate(message.UserId,
+            await _appNotificationManager.NotifyPlatformConnectionSynced(message.UserId,
                 platformConnection.ConnectionInfo.NotificationInfos.Select(ni => ni.AppId).ToList(),
                 platformConnection.PlatformId, session, cancellationToken);
 
