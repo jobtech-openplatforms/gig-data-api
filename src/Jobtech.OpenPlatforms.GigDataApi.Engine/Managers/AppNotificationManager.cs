@@ -30,11 +30,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
     public class AppNotificationManager : IAppNotificationManager
     {
         private readonly IBus _bus;
+        private readonly IPlatformDataManager _platformDataManager;
 
-
-        public AppNotificationManager(IBus bus)
+        public AppNotificationManager(IBus bus, IPlatformDataManager platformDataManager)
         {
             _bus = bus;
+            _platformDataManager = platformDataManager;
         }
 
         public async Task NotifyPlatformConnectionAwaitingOAuthAuthentication(string userId, IList<string> appIds,
@@ -54,7 +55,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         public async Task NotifyPlatformConnectionDataUpdate(string userId, IList<string> appIds,
             string platformId, IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
-            await NotifyPlatformDataUpdate(userId, appIds, platformId, session, PlatformConnectionState.Connected,
+            var platformConnectionState = PlatformConnectionState.Connected;
+            var data = await _platformDataManager.GetPlatformData(userId, platformId, session, cancellationToken);
+            if (data != null)
+            {
+                platformConnectionState = PlatformConnectionState.Synced;
+            }
+
+            await NotifyPlatformDataUpdate(userId, appIds, platformId, session, platformConnectionState,
                 cancellationToken);
         }
 
