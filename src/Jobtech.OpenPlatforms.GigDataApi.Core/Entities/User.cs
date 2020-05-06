@@ -168,6 +168,16 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
         public Token Token { get; private set; }
 
         public bool IsOAuthAuthentication => Token != null;
+
+        public static implicit operator OAuthOrEmailPlatformConnectionInfo(EmailPlatformConnectionInfo rhs)
+        {
+            return new OAuthOrEmailPlatformConnectionInfo(rhs.Email);
+        }
+
+        public static implicit operator OAuthOrEmailPlatformConnectionInfo(OAuthPlatformConnectionInfo rhs)
+        {
+            return new OAuthOrEmailPlatformConnectionInfo(rhs.Token);
+        }
     }
 
     public class NotificationInfo
