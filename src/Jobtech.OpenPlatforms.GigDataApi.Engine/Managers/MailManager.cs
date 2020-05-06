@@ -37,7 +37,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 $"If you initiated the verification process from OpenPlatforms.org please click on the following link to verify ownership: <a href=\"{acceptUrl}\">Verify</a>.<br/><br/>" +
                 $"Greetings from OpenPlatform.org";
 
-            await SendMail("verify@openplatforms.org", emailAddressToConfirm, subject, messageBody, true);
+            await SendMail("verify@jobtechdev.se", emailAddressToConfirm, subject, messageBody, true);
 
         }
 

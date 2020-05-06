@@ -203,7 +203,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                     {
                         var correspondingApp =
                             await _appManager.GetAppFromApplicationId(connectedApp, session,
-                                cancellationToken); //existingApps.Single(a => a.ApplicationId == connectedApp);
+                                cancellationToken);
                         if (existingApps.All(a => a.Id != correspondingApp.Id))
                         {
                             existingApps.Add(correspondingApp);
@@ -233,7 +233,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                         }
 
                         if (platformConnectionStateUpdate.ConnectedApps.Any(applicationId =>
-                            applicationId != correspondingApp.ExternalId))
+                            applicationId == correspondingApp.ExternalId))
                         {
                             updatedNotificationInfos.Add(notificationInfo);
                         }
