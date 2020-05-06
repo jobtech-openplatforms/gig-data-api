@@ -22,7 +22,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform.IoC
             {
                 client.BaseAddress = new Uri(gigPlatformConfig["ApiEndpointUri"]);
                 client.DefaultRequestHeaders.Add("User-Agent", "CVData");
-                client.DefaultRequestHeaders.Add("X-PlatformApi-SecretKey", gigPlatformConfig["SecretKey"]);
+                client.DefaultRequestHeaders.Add("X-Api-Key", gigPlatformConfig["SecretKey"]);
             });
 
             collection.AddTransient<IGigPlatformDataFetcher, GigPlatformDataFetcher>();

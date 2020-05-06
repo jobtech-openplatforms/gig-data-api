@@ -79,7 +79,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
                         return;
                     case PlatformIntegrationType.GigDataPlatformIntegration:
                         connectionInfo = await _gigPlatformDataFetcher.StartDataFetch(message.UserId,
-                            message.PlatformId, (OAuthOrEmailPlatformConnectionInfo) connectionInfo,
+                            message.PlatformId, OAuthOrEmailPlatformConnectionInfo.FromIPlatformConnectionInfo(connectionInfo),
                             platformConnection, cancellationToken);
                         break;
                     case PlatformIntegrationType.FreelancerIntegration:

@@ -39,7 +39,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
             using var loggerScope = _logger.BeginPropertyScope((LoggerPropertyNames.UserId, userId),
                 (LoggerPropertyNames.PlatformId, platformId), (LoggerPropertyNames.PlatformName, platformConnection.PlatformName));
 
-            _logger.LogInformation("Will start data fetch from Freelancer for user.");
+            _logger.LogInformation("Will start data fetch from a Gig platform integrated platform for user.");
 
             if (connectionInfo.IsOAuthAuthentication)
             {

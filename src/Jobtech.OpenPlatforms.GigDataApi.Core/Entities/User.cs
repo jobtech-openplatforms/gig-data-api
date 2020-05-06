@@ -169,14 +169,17 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
 
         public bool IsOAuthAuthentication => Token != null;
 
-        public static implicit operator OAuthOrEmailPlatformConnectionInfo(EmailPlatformConnectionInfo rhs)
+        public static OAuthOrEmailPlatformConnectionInfo FromIPlatformConnectionInfo(IPlatformConnectionInfo rhs)
         {
-            return new OAuthOrEmailPlatformConnectionInfo(rhs.Email);
-        }
-
-        public static implicit operator OAuthOrEmailPlatformConnectionInfo(OAuthPlatformConnectionInfo rhs)
-        {
-            return new OAuthOrEmailPlatformConnectionInfo(rhs.Token);
+            switch (rhs)
+            {
+                case EmailPlatformConnectionInfo emailPlatformConnectionInfo:
+                    return new OAuthOrEmailPlatformConnectionInfo(emailPlatformConnectionInfo.Email);
+                case OAuthPlatformConnectionInfo oauthPlatformConnectionInfo:
+                    return new OAuthOrEmailPlatformConnectionInfo(oauthPlatformConnectionInfo.Token);
+                default:
+                    throw new Exception("Unable to create OAuthOrEmailPlatformConnectionInfo from type");
+            }
         }
     }
 
