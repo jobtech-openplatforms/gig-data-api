@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Common;
+using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core.Models;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform.Exceptions;
 using Jobtech.OpenPlatforms.GigDataCommon.Library.Messages;
@@ -179,7 +180,22 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
             }
             else
             {
-                await _gigPlatformDataFetcher.CompleteDataFetching(userId, platformId, null);
+                if (message.ResultType == PlatformDataUpdateResultType.Succeess || 
+                    message.ResultType == PlatformDataUpdateResultType.MalformedDataResponse)
+                {
+                    await _gigPlatformDataFetcher.CompleteDataFetching(userId, platformId, null);
+                } 
+                else if (message.ResultType == PlatformDataUpdateResultType.UserNotFound)
+                {
+                    //we should remove the connection
+                    await _gigPlatformDataFetcher.CompleteDataFetchingWithConnectionRemoved(userId, platformId);
+                } 
+                else
+                {
+                    //communication error, we should enqueue a new request to try to retrieve the data again.
+                    var fetchMessage = new FetchDataForPlatformConnectionMessage(userId, platformId, PlatformIntegrationType.GigDataPlatformIntegration);
+                    await _bus.DeferLocal(new TimeSpan(0,0,30), fetchMessage);
+                }
             }
         }
 
