@@ -72,7 +72,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             acceptUrl = acceptUrl.Replace("{promptId}", promptId.ToString());
             declineUrl = declineUrl.Replace("{promptId}", promptId.ToString());
 
-            await _mailManager.SendConfirmEmailAddressMail(emailToValidate, acceptUrl, declineUrl);
+            await _mailManager.SendConfirmEmailAddressMail(emailToValidate, acceptUrl, declineUrl, cancellationToken);
 
             var createdPrompt = new EmailPrompt(promptId, user.Id, emailToValidate, expiresAt,
                 app.Id, platformId, platformDataClaim);

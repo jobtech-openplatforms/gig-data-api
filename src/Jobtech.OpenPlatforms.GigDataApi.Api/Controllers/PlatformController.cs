@@ -275,7 +275,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         /// Initiate a data fetch for the platform with the given id
         /// </summary>
         /// <param name="platformId">The platform id</param>
-        /// <param name="model"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpPost("{platformId}/initiate-data-fetch")]
