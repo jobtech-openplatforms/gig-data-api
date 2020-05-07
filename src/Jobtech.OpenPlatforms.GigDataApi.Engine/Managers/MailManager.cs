@@ -22,12 +22,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
     public class MailManager : IMailManager
     {
-        private readonly SmtpConfiguration _smtpConfiguration;
+        private readonly AmazonSESConfiguration _amazonSESConfiguration;
         private readonly ILogger<MailManager> _logger;
 
-        public MailManager(IOptions<SmtpConfiguration> smtpOptions, ILogger<MailManager> logger)
+        public MailManager(IOptions<AmazonSESConfiguration> amazonSESConfiguration, ILogger<MailManager> logger)
         {
-            _smtpConfiguration = smtpOptions.Value;
+            _amazonSESConfiguration = amazonSESConfiguration.Value;
             _logger = logger;
         }
 
@@ -57,7 +57,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             mailMessage.Body = body;
             mailMessage.IsBodyHtml = isBodyHtml;
 
-            using var aseClient = new AmazonSimpleEmailServiceV2Client(_smtpConfiguration.Username, _smtpConfiguration.Password, RegionEndpoint.EUCentral1);
+            using var sesClient = new AmazonSimpleEmailServiceV2Client(_amazonSESConfiguration.AccessKeyId, 
+                _amazonSESConfiguration.SecretKey, RegionEndpoint.EUCentral1);
 
             var mailBody = new Body();
             if (isBodyHtml)
@@ -85,7 +86,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 
             try
             {
-                var sendMailResponse = await aseClient.SendEmailAsync(sendMailRequest, cancellationToken);
+                var sendMailResponse = await sesClient.SendEmailAsync(sendMailRequest, cancellationToken);
             }
             catch (Exception e)
             {

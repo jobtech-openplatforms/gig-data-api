@@ -64,17 +64,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.IoC
             collection.AddHttpClient<Auth0ManagementApiHttpClient>(
                 client => { client.BaseAddress = new Uri(tenantDomain); });
 
-            //collection.AddHttpClient<Auth0Client>(client =>
-            //{
-            //    client.BaseAddress = new Uri(tenantDomain);
-            //});
-
-            var smtpSection = configuration.GetSection("Smtp");
-            collection.Configure<SmtpConfiguration>(c =>
+            var amazonSESSection = configuration.GetSection("AmazonSES");
+            collection.Configure<AmazonSESConfiguration>(c => 
             {
-                c.Server = smtpSection.GetValue<string>("Server");
-                c.Username = smtpSection.GetValue<string>("Username");
-                c.Password = smtpSection.GetValue<string>("Password");
+                c.AccessKeyId = amazonSESSection.GetValue<string>("AccessKeyId");
+                c.SecretKey = amazonSESSection.GetValue<string>("SecretKey");
             });
 
             return collection;
