@@ -18,6 +18,8 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Rebus.Config;
+using Rebus.Persistence.FileSystem;
+using Rebus.RabbitMq;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
@@ -89,19 +91,26 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 var rebusSection = hostContext.Configuration.GetSection("Rebus");
                 var inputQueueName = rebusSection.GetValue<string>("InputQueueName");
                 var errorQueueName = rebusSection.GetValue<string>("ErrorQueueName");
+                var timeoutsFilesystemFolder = rebusSection.GetValue<string>("TimeoutsFilesystemFolder");
+
                 services.Configure<RebusConfiguration>(c =>
                 {
                     c.InputQueueName = inputQueueName;
                     c.ErrorQueueName = errorQueueName;
                 });
 
-                var serviceBusConnectionString = hostContext.Configuration.GetConnectionString("ServiceBus");
+                var rabbitMqConnectionString = hostContext.Configuration.GetConnectionString("RabbitMq");
+                var rabbitMqConnectionEndpoint = new ConnectionEndpoint
+                {
+                    ConnectionString = rabbitMqConnectionString
+                };
+
                 services.AddRebus(c =>
                     c
                         .Transport(t =>
-                            t.UseAzureServiceBus(
-                                serviceBusConnectionString,
+                            t.UseRabbitMq(new List<ConnectionEndpoint> {rabbitMqConnectionEndpoint}, 
                                 inputQueueName))
+                        .Timeouts(t => t.UseFileSystem(timeoutsFilesystemFolder))
                         .Options(o =>
                         {
                             o.SimpleRetryStrategy(errorQueueAddress: errorQueueName,

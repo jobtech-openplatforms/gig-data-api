@@ -30,6 +30,7 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Rebus.Config;
+using Rebus.Persistence.InMem;
 using Rebus.Routing.TypeBased;
 using Rebus.ServiceProvider;
 using Serilog;
@@ -146,16 +147,17 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
                 };
             });
 
-            var serviceBusConnectionString = Configuration.GetConnectionString("ServiceBus");
+            var rabbitMqConnectionString = Configuration.GetConnectionString("RabbitMq");
 
             services.AddRebus(c =>
-                c.Transport(t =>
-                        t.UseAzureServiceBusAsOneWayClient(
-                            serviceBusConnectionString))
+                c
+                    .Transport(t =>
+                        t.UseRabbitMqAsOneWayClient(rabbitMqConnectionString))
+                    .Timeouts(t => t.StoreInMemory())
                     .Routing(r => r.TypeBased()
                         .Map<FetchDataForPlatformConnectionMessage>("platformdatafetcher.input")
-                        .Map<PlatformConnectionUpdateNotificationMessage>("platformdatafetcher.input")
-                    ));
+                        .Map<PlatformConnectionUpdateNotificationMessage>("platformdatafetcher.input"))
+            );
 
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
