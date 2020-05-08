@@ -8,6 +8,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core.Messages
         {
             UserId = userId;
             PlatformId = platformId;
+            DeleteReason = platformConnectionDeleteReason;
         }
 
         public string UserId { get; private set; }
