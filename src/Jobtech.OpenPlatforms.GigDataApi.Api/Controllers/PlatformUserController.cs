@@ -4,14 +4,14 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Api.Configuration;
 using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
+using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
@@ -26,26 +26,26 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         private readonly IPlatformConnectionManager _platformConnectionManager;
         private readonly IAppNotificationManager _appNotificationManager;
         private readonly IPlatformManager _platformManager;
-        private readonly IPlatformDataManager _platformDataManager;
         private readonly IUserManager _userManager;
         private readonly IAppManager _appManager;
+        private readonly EmailVerificationConfiguration _emailVerificationConfiguration;
 
         public PlatformUserController(IDocumentStore documentStore, IHttpContextAccessor httpContextAccessor,
             IPlatformConnectionManager platformConnectionManager, IAppNotificationManager appNotificationManager,
-            IPlatformManager platformManager, IPlatformDataManager platformDataManager, IUserManager userManager,
-            IAppManager appManager)
+            IPlatformManager platformManager, IUserManager userManager, IAppManager appManager, IOptions<EmailVerificationConfiguration> emailVerificationOptions)
         {
             _documentStore = documentStore;
             _httpContextAccessor = httpContextAccessor;
             _platformConnectionManager = platformConnectionManager;
             _appNotificationManager = appNotificationManager;
             _platformManager = platformManager;
-            _platformDataManager = platformDataManager;
             _userManager = userManager;
             _appManager = appManager;
+            _emailVerificationConfiguration = emailVerificationOptions.Value;
         }
 
         [HttpPost("start-connect-user-to-oauth-platform")]
+        [Produces("application/json")]
         public async Task<StartPlatformOauthConnectionResultViewModel> StartConnectUserToOauthPlatform(
             StartPlatformConnectionOauthModel model, CancellationToken cancellationToken)
         {
@@ -58,7 +58,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             var app = await _appManager.GetAppFromApplicationId(model.ApplicationId, session, cancellationToken);
 
             var authorizationResult = await _platformConnectionManager.StartConnectUserToOauthPlatform(model.PlatformId,
-                existingUser, app,
+                existingUser, app, model.PlatformDataClaim,
                 model.CallbackUri, session, cancellationToken);
 
             await session.SaveChangesAsync(cancellationToken);
@@ -68,7 +68,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         }
 
         [HttpPost("request-platform-data-update-notification")]
-        public async Task<ActionResult> RequestPlatformDataUpdateNotification(PlatformDataUpdateRequestModel model,
+        public async Task<IActionResult> RequestPlatformDataUpdateNotification(PlatformDataUpdateRequestModel model,
             CancellationToken cancellationToken)
         {
             var uniqueUserIdentifier = _httpContextAccessor.HttpContext.User.Identity.Name;
@@ -88,7 +88,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             {
                 //app not registered for notification. Throw.
                 throw new AppNotRegisteredForNotificationsException(
-                    $"App with application id {app.ApplicationId} is not registered for receiving notifications for platform with id {platform.Id} for user with id {existingUser.ExternalId}");
+                    $"App with application id {app.ExternalId} is not registered for receiving notifications for platform with id {platform.Id} for user with id {existingUser.ExternalId}");
             }
 
             await _appNotificationManager.NotifyPlatformConnectionDataUpdate(existingUser.Id,
@@ -99,6 +99,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         }
 
         [HttpPost("connect-user-to-email-platform")]
+        [Produces("application/json")]
         public async Task<PlatformConnectionResultViewModel> ConnectUserToEmailPlatform(
             StartPlatformConnectionEmailModel model, CancellationToken cancellationToken)
         {
@@ -112,7 +113,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
             var result = await _platformConnectionManager.ConnectUserToEmailPlatform(model.PlatformId, existingUser,
                 app,
-                model.PlatformUserEmailAddress, session, cancellationToken: cancellationToken);
+                model.PlatformUserEmailAddress, _emailVerificationConfiguration.AcceptUrl,
+                _emailVerificationConfiguration.DeclineUrl, model.PlatformDataClaim,
+                session, cancellationToken: cancellationToken);
 
             await session.SaveChangesAsync(cancellationToken);
 
@@ -123,7 +126,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
     public abstract class StartPlatformConnectionModelBase
     {
         [Required] public Guid PlatformId { get; set; }
-        [Required] public string ApplicationId { get; set; }
+        [Required] public Guid ApplicationId { get; set; }
+        public PlatformDataClaim? PlatformDataClaim { get; set; }
     }
 
     public class StartPlatformConnectionOauthModel : StartPlatformConnectionModelBase
@@ -143,7 +147,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             State = state;
         }
 
-        [JsonConverter(typeof(StringEnumConverter))]
         public PlatformConnectionState State { get; set; }
     }
 
@@ -160,7 +163,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
     public class PlatformDataUpdateRequestModel
     {
-        [Required] public string ApplicationId { get; set; }
+        [Required] public Guid ApplicationId { get; set; }
         [Required] public Guid PlatformId { get; set; }
     }
 }

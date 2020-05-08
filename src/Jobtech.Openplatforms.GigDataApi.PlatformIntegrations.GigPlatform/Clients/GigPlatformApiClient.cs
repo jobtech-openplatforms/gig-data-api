@@ -36,14 +36,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform.Clie
             catch (Exception e)
             {
                 _logger.LogError(e, "Error communicating with gig platform service. Will throw.");
-                throw new ExternalServiceErrorException("Error communicating with gig platform service.", e);
+                throw new ExternalServiceErrorException(message: "Error communicating with gig platform service.", innerException: e);
             }
 
             var strResult = await httpResult.Content.ReadAsStringAsync();
             if (!httpResult.IsSuccessStatusCode)
             {
                 _logger.LogError("Got non success status code {HttpStatusCode}. Will throw.", httpResult.StatusCode);
-                throw new ExternalServiceErrorException($"Got non success status code ({httpResult.StatusCode})");
+                throw new ExternalServiceErrorException(httpResult.StatusCode, $"Got non success status code. Message: {strResult}");
             }
 
             var result = JsonConvert.DeserializeObject<RequestLatestResult>(strResult);

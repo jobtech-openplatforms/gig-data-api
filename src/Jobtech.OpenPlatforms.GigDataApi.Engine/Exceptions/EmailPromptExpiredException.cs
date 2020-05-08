@@ -2,9 +2,9 @@
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions
 {
-    public class EmailPromptDoesNotExistException: Exception
+    public class EmailPromptExpiredException : Exception
     {
-        public EmailPromptDoesNotExistException(Guid promptId, string message = null) : base(message)
+        public EmailPromptExpiredException(Guid promptId, string message = null) : base(message)
         {
             PromptId = promptId;
         }

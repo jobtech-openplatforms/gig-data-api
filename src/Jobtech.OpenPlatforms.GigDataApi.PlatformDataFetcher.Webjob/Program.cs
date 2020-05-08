@@ -9,6 +9,7 @@ using Jobtech.OpenPlatforms.GigDataApi.Engine.IoC;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Configuration;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Indexes;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHandlers;
+using Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,8 +17,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using Raven.Client.Documents;
-using Rebus.Bus;
 using Rebus.Config;
 using Rebus.Persistence.FileSystem;
 using Rebus.RabbitMq;
@@ -32,7 +31,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
 {
     class Program
     {
-        static async Task Main(string[] args)
+        static async Task Main()
         {
             var builder = new HostBuilder();
 
@@ -42,7 +41,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 configHost.AddInMemoryCollection(new[]
                     {
                         new KeyValuePair<string, string>(HostDefaults.EnvironmentKey,
-                            System.Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")),
+                            Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")),
                     })
                     .AddEnvironmentVariables();
             }).ConfigureAppConfiguration((hostContext, configApp) =>
@@ -121,17 +120,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                         })
                         .Logging(l => l.Serilog())
                         .Routing(r => r.TypeBased()
-                            .Map<PlatformConnectionUpdateNotificationMessage>("platformconnection.update")).Serialization(
-                            s =>
-                            {
-                                var jsonSettings = new JsonSerializerSettings
-                                {
-                                    TypeNameHandling = TypeNameHandling.Auto,
-                                    ContractResolver = new PrivateResolver()
-                                };
-
-                                s.UseNewtonsoftJson(jsonSettings);
-                            })
+                            .Map<FetchDataForPlatformConnectionMessage>(inputQueueName)
+                            .Map<PlatformConnectionUpdateNotificationMessage>(inputQueueName))
 
                 );
 
@@ -168,7 +158,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 DocumentStoreHolder.KeyPath = keyPath;
                 DocumentStoreHolder.TypeInAssemblyContainingIndexesToCreate =
                     typeof(Users_ByPlatformConnectionPossiblyRipeForDataFetch);
-                services.AddSingleton<IDocumentStore>(DocumentStoreHolder.Store);
+                services.AddSingleton(DocumentStoreHolder.Store);
+
+                services.AddHostedService<TimedDataFetcherTriggerTask>();
 
             });
 
@@ -188,10 +180,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
 
                 logger.LogInformation("Will start Rebus");
                 host.Services.UseRebus();
-
-                var bus = host.Services.GetRequiredService<IBus>();
-                var message = new PlatformDataFetcherTriggerMessage();
-                await bus.SendLocal(message);
 
                 logger.LogInformation("Starting host.");
                 await host.RunAsync();

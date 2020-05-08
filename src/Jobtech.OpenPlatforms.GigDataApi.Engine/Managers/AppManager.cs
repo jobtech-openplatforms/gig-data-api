@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
 using Raven.Client.Documents;
@@ -12,21 +13,16 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {
     public interface IAppManager
     {
-        Task<(App, Auth0App)> CreateApp(string name, string notificationEndpoint,
-            string emailVerificationNotificationEndpoint, string authCallbackUri, IAsyncDocumentSession session,
+        Task<App> CreateApp(string name, string dataUpdateCallbackUrl,
+            string authorizationCallbackUrl,
+            string description, string logoUrl, string websiteUrl, PlatformDataClaim platformDataClaim,
+            IAsyncDocumentSession session, bool isInactive = false,
             CancellationToken cancellationToken = default);
 
-        Task<App> CreateApp(string name, string applicationId, string secretKey, string notificationEndpoint,
-            string emailVerificationNotificationEndpoint, IAsyncDocumentSession session,
+        Task<App> GetAppFromApplicationId(Guid externalId, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default);
 
-        Task<(App, Auth0App)> GetAppInfoFromApplicationId(string applicationId, IAsyncDocumentSession session,
-            CancellationToken cancellationToken);
-
-        Task<App> GetAppFromApplicationId(string applicationId, IAsyncDocumentSession session,
-            CancellationToken cancellationToken = default);
-
-        Task<IList<App>> GetAppsFromApplicationIds(IList<string> applicationIds,
+        Task<IList<App>> GetAppsFromApplicationIds(IList<Guid> externalIds,
             IAsyncDocumentSession session, CancellationToken cancellationToken = default);
 
         Task<App> GetAppFromSecretKey(string secretKey, IAsyncDocumentSession session,
@@ -37,94 +33,75 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         Task<IEnumerable<App>> GetAppsFromIds(IList<string> ids, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default);
 
-        Task SetNotificationEndpointUrl(string applicationId, string url, IAsyncDocumentSession session,
+        Task<IEnumerable<App>> GetAllActiveApps(int page, int pageSize, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default);
 
-        Task SetEmailVerificationNotificationEndpointUrl(string applicationId, string url,
+        Task SetDataUpdateCallbackUrl(Guid externalId, string url, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
+
+        Task SetAuthorizationCallbackUrl(Guid externalId, string url,
             IAsyncDocumentSession session, CancellationToken cancellationToken = default);
 
-        Task SetCallbackUrl(string applicationId, string url, IAsyncDocumentSession session,
+        Task SetName(Guid externalId, string name, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default);
 
-        Task SetName(string applicationId, string name, IAsyncDocumentSession session,
-            CancellationToken cancellationToken = default);
+        Task SetDescription(Guid externalId, string description, IAsyncDocumentSession session,
+            CancellationToken cancellationToken);
 
-        Task RotateSecret(string applicationId, IAsyncDocumentSession session,
+        Task SetLogoUrl(Guid externalId, string logoUrl, IAsyncDocumentSession session,
+            CancellationToken cancellationToken);
+
+        Task SetWebsiteUrl(Guid externalId, string websiteUrl, IAsyncDocumentSession session,
+            CancellationToken cancellationToken);
+
+        Task SetDefaultPlatformDataClaim(Guid externalId, PlatformDataClaim platformDataClaim, IAsyncDocumentSession session,
+            CancellationToken cancellationToken);
+
+        Task<string> RotateSecret(Guid externalId, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default);
     }
 
     public class AppManager : IAppManager
     {
-        private readonly Auth0ManagementApiHttpClient _httpClient;
-
-        public AppManager(Auth0ManagementApiHttpClient httpClient)
+        public AppManager()
         {
-            _httpClient = httpClient;
         }
 
-        public async Task<(App, Auth0App)> CreateApp(string name, string notificationEndpoint,
-            string emailVerificationNotificationEndpoint, string authCallbackUri, IAsyncDocumentSession session,
+        public async Task<App> CreateApp(string name, string dataUpdateCallbackUrl,
+            string authorizationCallbackUrl,
+            string description, string logoUrl, string websiteUrl, PlatformDataClaim platformDataClaim, 
+            IAsyncDocumentSession session, bool isInactive = false,
             CancellationToken cancellationToken = default)
         {
-            var auth0App = await _httpClient.CreateApp(name, authCallbackUri, cancellationToken);
-            var app = await CreateApp(name, auth0App.ClientId, Guid.NewGuid().ToString(), notificationEndpoint,
-                emailVerificationNotificationEndpoint, session, cancellationToken);
-
-            return (app, auth0App);
-        }
-
-        public async Task<App> CreateApp(string name, string applicationId, string secretKey,
-            string notificationEndpoint,
-            string emailVerificationNotificationEndpoint, IAsyncDocumentSession session,
-            CancellationToken cancellationToken = default)
-        {
-            var existingAppWithApplicationId =
-                await session.Query<App>()
-                    .SingleOrDefaultAsync(a => a.ApplicationId == applicationId, cancellationToken);
-
-            if (existingAppWithApplicationId != null)
-            {
-                throw new AppDoesAlreadyExistException($"App with application id '{applicationId}' does already exist");
-            }
-
-            notificationEndpoint = string.IsNullOrWhiteSpace(notificationEndpoint) ? null : notificationEndpoint;
-            emailVerificationNotificationEndpoint = string.IsNullOrWhiteSpace(emailVerificationNotificationEndpoint)
+            dataUpdateCallbackUrl = string.IsNullOrWhiteSpace(dataUpdateCallbackUrl) ? null : dataUpdateCallbackUrl;
+            authorizationCallbackUrl = string.IsNullOrWhiteSpace(authorizationCallbackUrl)
                 ? null
-                : emailVerificationNotificationEndpoint;
+                : authorizationCallbackUrl;
 
-            var app = new App(name, secretKey, applicationId, notificationEndpoint,
-                emailVerificationNotificationEndpoint);
+            var app = new App(name, Guid.NewGuid(), Guid.NewGuid().ToString(), dataUpdateCallbackUrl,
+                authorizationCallbackUrl, description, logoUrl, websiteUrl, platformDataClaim, isInactive);
             await session.StoreAsync(app, cancellationToken);
             return app;
         }
 
-        public async Task<(App, Auth0App)> GetAppInfoFromApplicationId(string applicationId,
-            IAsyncDocumentSession session, CancellationToken cancellationToken)
-        {
-            var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
-            var auth0App = await _httpClient.GetApp(applicationId, cancellationToken);
-
-            return (app, auth0App);
-        }
-
-        public async Task<App> GetAppFromApplicationId(string applicationId, IAsyncDocumentSession session,
+        public async Task<App> GetAppFromApplicationId(Guid externalId, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default)
         {
             var app = await session.Query<App>()
-                .SingleOrDefaultAsync(a => a.ApplicationId == applicationId, cancellationToken);
+                .SingleOrDefaultAsync(a => a.ExternalId == externalId, cancellationToken);
 
             if (app == null)
             {
-                throw new AppDoesNotExistException($"App with application id {applicationId} does not exist");
+                throw new AppDoesNotExistException($"App with external id {externalId} does not exist");
             }
 
             return app;
         }
 
-        public async Task<IList<App>> GetAppsFromApplicationIds(IList<string> applicationIds,
+        public async Task<IList<App>> GetAppsFromApplicationIds(IList<Guid> externalIds,
             IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
-            var apps = await session.Query<App>().Where(a => a.ApplicationId.In(applicationIds))
+            var apps = await session.Query<App>().Where(a => a.ExternalId.In(externalIds))
                 .ToListAsync(cancellationToken);
             return apps;
         }
@@ -156,39 +133,73 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             return apps.Values;
         }
 
-        public async Task SetNotificationEndpointUrl(string applicationId, string url, IAsyncDocumentSession session,
+        public async Task<IEnumerable<App>> GetAllActiveApps(int page, int pageSize, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default)
         {
-            var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
-            app.NotificationEndpoint = string.IsNullOrWhiteSpace(url) ? null : url;
+            var apps = await session.Query<App>()
+                .Where(a => !a.IsInactive)
+                .Skip(page * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return apps;
         }
 
-        public async Task SetEmailVerificationNotificationEndpointUrl(string applicationId, string url,
+        public async Task SetDataUpdateCallbackUrl(Guid externalId, string url, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default)
+        {
+            var app = await GetAppFromApplicationId(externalId, session, cancellationToken);
+            app.DataUpdateCallbackUrl = string.IsNullOrWhiteSpace(url) ? null : url;
+        }
+
+        public async Task SetAuthorizationCallbackUrl(Guid externalId, string url,
             IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
-            var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
-            app.EmailVerificationNotificationEndpoint = string.IsNullOrWhiteSpace(url) ? null : url;
+            var app = await GetAppFromApplicationId(externalId, session, cancellationToken);
+            app.AuthorizationCallbackUrl = string.IsNullOrWhiteSpace(url) ? null : url;
         }
 
-        public async Task SetCallbackUrl(string applicationId, string url, IAsyncDocumentSession session,
+        public async Task SetName(Guid externalId, string name, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default)
         {
-            var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
-            var _ = await _httpClient.UpdateCallbackUris(app.ApplicationId, url, cancellationToken);
-        }
-
-        public async Task SetName(string applicationId, string name, IAsyncDocumentSession session,
-            CancellationToken cancellationToken = default)
-        {
-            var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
+            var app = await GetAppFromApplicationId(externalId, session, cancellationToken);
             app.Name = name;
         }
 
-        public async Task RotateSecret(string applicationId, IAsyncDocumentSession session,
+        public async Task SetDescription(Guid externalId, string description, IAsyncDocumentSession session,
+            CancellationToken cancellationToken)
+        {
+            var app = await GetAppFromApplicationId(externalId, session, cancellationToken);
+            app.Description = description;
+        }
+
+        public async Task SetLogoUrl(Guid externalId, string logoUrl, IAsyncDocumentSession session,
+            CancellationToken cancellationToken)
+        {
+            var app = await GetAppFromApplicationId(externalId, session, cancellationToken);
+            app.LogoUrl = logoUrl;
+        }
+
+        public async Task SetWebsiteUrl(Guid externalId, string websiteUrl, IAsyncDocumentSession session,
+            CancellationToken cancellationToken)
+        {
+            var app = await GetAppFromApplicationId(externalId, session, cancellationToken);
+            app.WebsiteUrl = websiteUrl;
+        }
+
+        public async Task SetDefaultPlatformDataClaim(Guid externalId, PlatformDataClaim platformDataClaim, IAsyncDocumentSession session,
+            CancellationToken cancellationToken)
+        {
+            var app = await GetAppFromApplicationId(externalId, session, cancellationToken);
+            app.DefaultPlatformDataClaim = platformDataClaim;
+        }
+
+        public async Task<string> RotateSecret(Guid externalId, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default)
         {
-            var app = await GetAppFromApplicationId(applicationId, session, cancellationToken);
+            var app = await GetAppFromApplicationId(externalId, session, cancellationToken);
             app.SecretKey = Guid.NewGuid().ToString();
+            return app.SecretKey;
         }
     }
 }

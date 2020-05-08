@@ -54,6 +54,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
             var (platformDataId, platformConnection) = await HandleFetchDataResult(message.UserId, message.PlatformId,
                 message.Result, session, cancellationToken);
 
+            if (platformDataId == null)
+            {
+                return;
+            }
+
             using var innerLoggingScope =
                 _logger.BeginPropertyScope((LoggerPropertyNames.PlatformDataId, platformDataId));
 
@@ -62,7 +67,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             await session.SaveChangesAsync(cancellationToken);
 
-            await _appNotificationManager.NotifyPlatformConnectionDataUpdate(message.UserId,
+            await _appNotificationManager.NotifyPlatformConnectionSynced(message.UserId,
                 platformConnection.ConnectionInfo.NotificationInfos.Select(ni => ni.AppId).ToList(),
                 platformConnection.PlatformId, session, cancellationToken);
 
@@ -74,12 +79,22 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
         {
             var user = await session.LoadAsync<User>(userId, cancellationToken);
 
+            var platformConnection = user.PlatformConnections.SingleOrDefault(pc => pc.PlatformId == platformId);
+
+            if (platformConnection == null)
+            {
+                _logger.LogInformation(
+                    "No platform connection for platform {platformId} exists for user with id {userId}. Will return null.", platformId,
+                    user.Id);
+                //platform connection has been removed between the time we initiated the data fetch and now. 
+                return (null, null);
+            }
+
             var platformData = await _platformDataManager.AddPlatformData(userId, platformId, result.NumberOfGigs,
                 result.PeriodStart,
                 result.PeriodEnd, result.Ratings, result.AverageRating, result.Reviews, result.Achievements,
                 result.RawData, session, cancellationToken);
 
-            var platformConnection = user.PlatformConnections.Single(pc => pc.PlatformId == platformId);
             platformConnection.MarkAsDataFetchSuccessful();
 
             return (platformData.Id, platformConnection);

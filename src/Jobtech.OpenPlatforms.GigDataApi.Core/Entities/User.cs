@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities.Base;
 using Jobtech.OpenPlatforms.GigDataApi.Core.OAuth;
 
@@ -14,16 +15,13 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
             ExternalId = Guid.NewGuid();
         }
 
-        public User(string uniqueIdentifier, string firstName, string lastName) : this()
+        public User(string uniqueIdentifier) : this()
         {
             UniqueIdentifier = uniqueIdentifier;
-            FirstName = firstName;
-            LastName = lastName;
         }
 
 
-        public string FirstName { get; private set; }
-        public string LastName { get; private set; }
+        public string Name { get; set; }
         public string UniqueIdentifier { get; private set; }
         public Guid ExternalId { get; private set; }
         public IList<PlatformConnection> PlatformConnections { get; private set; }
@@ -114,7 +112,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
     public interface IPlatformConnectionInfo
     {
         IList<NotificationInfo> NotificationInfos { get; set; }
-        bool IsDeleted { get; }
+        bool IsDeleted { get; set; }
+        PlatformConnectionDeleteReason? DeleteReason { get; set; }
     }
 
     public abstract class PlatformConnectionInfoBase : IPlatformConnectionInfo
@@ -126,6 +125,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
 
         public IList<NotificationInfo> NotificationInfos { get; set; }
         public bool IsDeleted { get; set; }
+        public PlatformConnectionDeleteReason? DeleteReason { get; set; }
     }
 
     public class OAuthPlatformConnectionInfo : PlatformConnectionInfoBase
@@ -170,6 +170,50 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
         public Token Token { get; private set; }
 
         public bool IsOAuthAuthentication => Token != null;
+
+        public static OAuthOrEmailPlatformConnectionInfo FromIPlatformConnectionInfo(IPlatformConnectionInfo rhs)
+        {
+            switch (rhs)
+            {
+                case EmailPlatformConnectionInfo emailPlatformConnectionInfo:
+                    return new OAuthOrEmailPlatformConnectionInfo(emailPlatformConnectionInfo.Email) { 
+                        NotificationInfos = rhs.NotificationInfos, 
+                        IsDeleted = rhs.IsDeleted 
+                    };
+                case OAuthPlatformConnectionInfo oauthPlatformConnectionInfo:
+                    return new OAuthOrEmailPlatformConnectionInfo(oauthPlatformConnectionInfo.Token) { 
+                        NotificationInfos = rhs.NotificationInfos, 
+                        IsDeleted = rhs.IsDeleted 
+                    };
+                default:
+                    throw new Exception("Unable to create OAuthOrEmailPlatformConnectionInfo from type");
+            }
+        }
+
+        public static IPlatformConnectionInfo FromOAuthOrEmailPlatformConnectionInfo(OAuthOrEmailPlatformConnectionInfo oauthOrEmailConnectionInfo, IPlatformConnectionInfo target)
+        {
+            switch (target)
+            {
+                case EmailPlatformConnectionInfo emailPlatformConnectionInfo:
+                    if (oauthOrEmailConnectionInfo.Email != emailPlatformConnectionInfo.Email)
+                    {
+                        throw new Exception("Cannot convert oauth/email connection info to email connection info when emails differ");
+                    }
+                    emailPlatformConnectionInfo.IsDeleted = oauthOrEmailConnectionInfo.IsDeleted;
+                    emailPlatformConnectionInfo.NotificationInfos = oauthOrEmailConnectionInfo.NotificationInfos;
+                    return emailPlatformConnectionInfo;
+                case OAuthPlatformConnectionInfo oAuthPlatformConnectionInfo:
+                    if (oauthOrEmailConnectionInfo.Token == null)
+                    {
+                        throw new Exception("Cannot convert oauth/email connection info to oauth connection info");
+                    }
+                    oAuthPlatformConnectionInfo.IsDeleted = oauthOrEmailConnectionInfo.IsDeleted;
+                    oAuthPlatformConnectionInfo.NotificationInfos = oauthOrEmailConnectionInfo.NotificationInfos;
+                    return oAuthPlatformConnectionInfo;
+                default:
+                    throw new Exception("Unable to create IPlatformConnection from target type");
+            }
+        }
     }
 
     public class NotificationInfo
@@ -179,12 +223,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
             Created = DateTimeOffset.UtcNow;
         }
 
-        public NotificationInfo(string appId): this()
+        public NotificationInfo(string appId, PlatformDataClaim platformDataClaim): this()
         {
             AppId = appId;
+            PlatformDataClaim = platformDataClaim;
         }
 
         public string AppId { get; private set; }
+        public PlatformDataClaim PlatformDataClaim { get; set; }
         public DateTimeOffset Created { get; private set; }
     }
 

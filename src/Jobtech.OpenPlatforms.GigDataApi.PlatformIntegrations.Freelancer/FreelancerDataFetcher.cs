@@ -22,23 +22,21 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
     {
         private readonly FreelancerApiClient _apiClient;
         private readonly IFreelancerAuthenticator _freelancerAuthenticator;
-        private readonly ILogger<FreelancerDataFetcher> _logger;
 
-        public FreelancerDataFetcher(FreelancerApiClient apiClient, IFreelancerAuthenticator authenticator, IBus bus, ILogger<FreelancerDataFetcher> logger): base(bus)
+        public FreelancerDataFetcher(FreelancerApiClient apiClient, IFreelancerAuthenticator authenticator, IBus bus, ILogger<FreelancerDataFetcher> logger): base(bus, logger)
         {
             _apiClient = apiClient;
             _freelancerAuthenticator = authenticator;
-            _logger = logger;
         }
 
         public new async Task<OAuthPlatformConnectionInfo> StartDataFetch(string userId, string platformId,
             OAuthPlatformConnectionInfo connectionInfo, PlatformConnection platformConnection,
             CancellationToken cancellationToken = default)
         {
-            _logger.LogTrace($"Will start data fetch from Freelancer for user with id {userId}");
+            Logger.LogTrace($"Will start data fetch from Freelancer for user with id {userId}");
             if (connectionInfo.Token.HasExpired())
             {
-                _logger.LogInformation($"Token has expired, will try to refresh it");
+                Logger.LogInformation($"Token has expired, will try to refresh it");
                 try
                 {
                     var newToken = await _freelancerAuthenticator.RefreshToken(new OAuthAccessToken
@@ -52,7 +50,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
                 }
                 catch (UnauthorizedAccessException)
                 {
-                    _logger.LogInformation(
+                    Logger.LogInformation(
                         "The consent to access Freelancer seems tot have been revoked. Will act accordingly");
                     return await HandleUnauthorized(userId, platformId);
                 }
@@ -73,7 +71,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
             }
             catch (UnauthorizedAccessException)
             {
-                _logger.LogInformation(
+                Logger.LogInformation(
                     "The consent to access Freelancer seems tot have been revoked. Will act accordingly");
                 return await HandleUnauthorized(userId, platformId);
             }
@@ -128,15 +126,15 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
             await CompleteDataFetch(userId, platformId, result);
 
 
-            _logger.LogTrace($"Freelancer data fetch completed for user with id {userId}");
+            Logger.LogTrace($"Freelancer data fetch completed for user with id {userId}");
             return connectionInfo;
         }
 
         private async Task<OAuthPlatformConnectionInfo> HandleUnauthorized(string userId, string platformId)
         {
             //we do no longer have access to freelancer for the given connection
-            await CompleteDataFetchWithConnectionRemoved(userId, platformId);
-            return new OAuthPlatformConnectionInfo(null) { IsDeleted = true };
+            await CompleteDataFetchWithConnectionRemoved(userId, platformId, PlatformConnectionDeleteReason.NotAuthorized);
+            return new OAuthPlatformConnectionInfo(null) { IsDeleted = true, DeleteReason = PlatformConnectionDeleteReason.NotAuthorized };
         }
 
         private (IList<RatingDataFetchResult> Ratings, IList<ReviewDataFetchResult> Reviews) GetRatingsAndReviews(

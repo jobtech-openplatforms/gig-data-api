@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading;
@@ -23,20 +24,18 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
     {
         private readonly IDocumentStore _documentStore;
         private readonly IUserManager _userManager;
-        private readonly IAppManager _appManager;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly string _auth0TenantUrl;
         private readonly string _auth0CvDataAudience;
         private readonly string _auth0MobileBankIdConnectionName;
         private readonly string _auth0DatabaseConnectionName;
 
-        public UserController(IDocumentStore documentStore, IUserManager userManager, IAppManager appManager,
+        public UserController(IDocumentStore documentStore, IUserManager userManager,
             IHttpContextAccessor httpContextAccessor,
             IOptions<CVDataEngineServiceCollectionExtension.Auth0Configuration> auth0Options)
         {
             _documentStore = documentStore;
             _userManager = userManager;
-            _appManager = appManager;
             _httpContextAccessor = httpContextAccessor;
             _auth0TenantUrl = auth0Options.Value.TenantDomain;
             _auth0CvDataAudience = auth0Options.Value.CVDataAudience;
@@ -47,7 +46,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
         [HttpGet("mobile-bank-id-authorization-url/{applicationId}")]
         [AllowAnonymous]
-        public async Task<ActionResult<AuthEndpointInfoViewModel>> GetMobileBankIdAuthorizationUrl(string applicationId,
+        [Produces("application/json")]
+        public async Task<ActionResult<AuthEndpointInfoViewModel>> GetMobileBankIdAuthorizationUrl(Guid applicationId,
             [FromQuery] string redirectUrl, CancellationToken cancellationToken)
         {
             return await GetAuthorizationUrl(_auth0MobileBankIdConnectionName, applicationId, redirectUrl,
@@ -56,19 +56,20 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
         [HttpGet("username-password-authorization-url/{applicationId}")]
         [AllowAnonymous]
+        [Produces("application/json")]
         public async Task<ActionResult<AuthEndpointInfoViewModel>> GetUsernamePasswordAuthorizationUrl(
-            string applicationId, [FromQuery] string redirectUrl, CancellationToken cancellationToken)
+            Guid applicationId, [FromQuery] string redirectUrl, CancellationToken cancellationToken)
         {
             return await GetAuthorizationUrl(_auth0DatabaseConnectionName, applicationId, redirectUrl,
                 cancellationToken);
         }
 
-        private async Task<AuthEndpointInfoViewModel> GetAuthorizationUrl(string connectionName, string applicationId,
+        private async Task<AuthEndpointInfoViewModel> GetAuthorizationUrl(string connectionName, Guid applicationId,
             string redirectUrl, CancellationToken cancellationToken)
         {
             using var session = _documentStore.OpenAsyncSession();
             var app = await session.Query<App>()
-                .SingleOrDefaultAsync(a => a.ApplicationId == applicationId, cancellationToken);
+                .SingleOrDefaultAsync(a => a.ExternalId == applicationId, cancellationToken);
 
             if (app == null)
             {
@@ -94,46 +95,15 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             return new AuthEndpointInfoViewModel {Url = url};
         }
 
-        [HttpPost("add-validated-email-address")]
-        [AllowAnonymous]
-        public async Task AddValidatedEmailAddress([FromHeader(Name = "app_secret")] string appSecret,
-            [FromBody] ValidatedEmailModel model, CancellationToken cancellationToken)
-        {
-            using var session = _documentStore.OpenAsyncSession();
-            var user = await _userManager.GetUserByExternalId(model.UserId, session, cancellationToken);
-            var app = await _appManager.GetAppFromSecretKey(appSecret, session, cancellationToken);
-
-            var existingUserEmail =
-                user.UserEmails.SingleOrDefault(ue => ue.Email == model.Email.ToLowerInvariant());
-
-            if (existingUserEmail != null)
-            {
-                if (existingUserEmail.UserEmailState != UserEmailState.Verified)
-                {
-                    existingUserEmail.SetEmailState(UserEmailState.Verified);
-                    existingUserEmail.IsVerifiedFromApp = true;
-                    existingUserEmail.VerifyingAppId = app.Id;
-                }
-            }
-            else
-            {
-                var newUserEmail = new UserEmail(model.Email.ToLowerInvariant(), UserEmailState.Verified)
-                {
-                    IsVerifiedFromApp = true, VerifyingAppId = app.Id
-                };
-                user.UserEmails.Add(newUserEmail);
-            }
-
-            await session.SaveChangesAsync(cancellationToken);
-        }
-
         [HttpGet]
+        [Produces("application/json")]
         public async Task<ActionResult<UserViewModel>> GetUser(CancellationToken cancellationToken)
         {
             var uniqueUserId = _httpContextAccessor.HttpContext.User.Identity.Name;
 
             using var session = _documentStore.OpenAsyncSession();
             var user = await _userManager.GetOrCreateUserIfNotExists(uniqueUserId, session, cancellationToken);
+
             return new UserViewModel(user);
         }
     }
@@ -154,9 +124,24 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         public UserViewModel(User user)
         {
             Id = user.ExternalId;
+
+            UserEmails = user.UserEmails.Select(ue => new UserEmailViewModel(ue.Email, ue.UserEmailState));
         }
 
-        public Guid Id { get; }
+        public Guid Id { get; private set; }
+        public IEnumerable<UserEmailViewModel> UserEmails { get; private set; }
 
+    }
+
+    public class UserEmailViewModel
+    {
+        public UserEmailViewModel(string email, UserEmailState state)
+        {
+            Email = email;
+            State = state;
+        }
+
+        public string Email { get; private set; }
+        public UserEmailState State { get; private set; }
     }
 }

@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
 using Raven.Client.Documents;
@@ -11,24 +13,30 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
 {
     public interface IEmailValidatorManager
     {
-        Task StartEmailValidation(string emailToValidate, User user, App app, IAsyncDocumentSession session,
-            string platformId = "None", bool shouldResendPrompt = false, CancellationToken cancellationToken = default);
-
-        Task<EmailPrompt> CompleteEmailValidation(string promptId, IAsyncDocumentSession session,
+        Task StartEmailValidation(string emailToValidate, User user, App app,
+            PlatformDataClaim? platformDataClaim,
+            string acceptUrl, string declineUrl, IAsyncDocumentSession session, string platformId = "None",
             CancellationToken cancellationToken = default);
+
+        Task<EmailPrompt> CompleteEmailValidation(Guid promptId, bool result, IAsyncDocumentSession session,
+            CancellationToken cancellationToken = default);
+
+        Task ExpireAllActiveEmailValidationsForUserEmail(string email, User user,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default);
     }
 
     public class EmailValidatorManager : IEmailValidatorManager
     {
-        private readonly ApproveApiHttpClient _approveApiHttpClient;
+        private readonly IMailManager _mailManager;
 
-        public EmailValidatorManager(ApproveApiHttpClient approveApiHttpClient)
+        public EmailValidatorManager(IMailManager mailManager)
         {
-            _approveApiHttpClient = approveApiHttpClient;
+            _mailManager = mailManager;
         }
 
         public async Task StartEmailValidation(string emailToValidate, User user, App app,
-            IAsyncDocumentSession session, string platformId = "None", bool shouldResendPrompt = false,
+            PlatformDataClaim? platformDataClaim,
+            string acceptUrl, string declineUrl, IAsyncDocumentSession session, string platformId = "None",
             CancellationToken cancellationToken = default)
         {
             emailToValidate = emailToValidate.ToLowerInvariant();
@@ -46,35 +54,54 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 var unexpiredPrompt = existingPromptsForEmail.SingleOrDefault(p => !p.HasExpired());
                 if (unexpiredPrompt != null)
                 {
-                    if (shouldResendPrompt)
+                    if (!unexpiredPrompt.PlatformIdToAppId.ContainsKey(platformId))
                     {
-                        unexpiredPrompt.MarkAsExpired();
+                        unexpiredPrompt.PlatformIdToAppId.Add(platformId, new List<string>());
                     }
-                    else
+
+                    if (unexpiredPrompt.PlatformIdToAppId[platformId].All(appId => appId != app.Id))
                     {
-                        if (!unexpiredPrompt.PlatformIdToAppId.ContainsKey(platformId))
-                        {
-                            unexpiredPrompt.PlatformIdToAppId.Add(platformId, new List<string>());
-                        }
-
-                        if (unexpiredPrompt.PlatformIdToAppId[platformId].All(appId => appId != app.Id))
-                        {
-                            unexpiredPrompt.PlatformIdToAppId[platformId].Add(app.Id);
-                        }
-
-                        return;
+                        unexpiredPrompt.PlatformIdToAppId[platformId].Add(app.Id);
                     }
                 }
             }
 
-            var (promptId, expiresIn) = await _approveApiHttpClient.SendEmailValidationPrompt(emailToValidate);
+            var promptId = Guid.NewGuid();
+            var expiresAt = DateTimeOffset.UtcNow.AddHours(48).ToUnixTimeSeconds();
 
-            var createdPrompt = new EmailPrompt(promptId, user.Id, emailToValidate, expiresIn,
-                app.Id, platformId);
+            acceptUrl = acceptUrl.Replace("{promptId}", promptId.ToString());
+            declineUrl = declineUrl.Replace("{promptId}", promptId.ToString());
+
+            await _mailManager.SendConfirmEmailAddressMail(emailToValidate, acceptUrl, declineUrl, cancellationToken);
+
+            var createdPrompt = new EmailPrompt(promptId, user.Id, emailToValidate, expiresAt,
+                app.Id, platformId, platformDataClaim);
             await session.StoreAsync(createdPrompt, cancellationToken);
         }
 
-        public async Task<EmailPrompt> CompleteEmailValidation(string promptId, IAsyncDocumentSession session,
+        public async Task ExpireAllActiveEmailValidationsForUserEmail(string email, User user,
+            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
+        {
+            var existingUserEmail = user.UserEmails.SingleOrDefault(ue => ue.Email == email.ToLowerInvariant());
+            if (existingUserEmail == null)
+            {
+                throw new EmailIsNotUserEmailException(email, user.ExternalId);
+            }
+
+            var allPromptsForUserEmail = await session.Query<EmailPrompt>()
+                .Where(ep => ep.UserId == user.Id && ep.EmailAddress == email)
+                .Take(1024)
+                .ToListAsync(cancellationToken);
+
+            var activePromptsForUserEmail = allPromptsForUserEmail.Where(ue => !ue.HasExpired());
+
+            foreach (var emailPrompt in activePromptsForUserEmail)
+            {
+                emailPrompt.MarkAsExpired();
+            }
+        }
+
+        public async Task<EmailPrompt> CompleteEmailValidation(Guid promptId, bool result, IAsyncDocumentSession session,
             CancellationToken cancellationToken = default)
         {
             var prompt = await session.Query<EmailPrompt>()
@@ -85,12 +112,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
                 throw new EmailPromptDoesNotExistException(promptId);
             }
 
-            var promptAnswer = await _approveApiHttpClient.GetPromptAnswer(promptId);
-
-            if (promptAnswer.HasValue)
+            if (prompt.HasExpired())
             {
-                prompt.SetResult(promptAnswer.Value);
+                throw new EmailPromptExpiredException(prompt.PromptId);
             }
+
+            prompt.SetResult(result);
 
             return prompt;
         }

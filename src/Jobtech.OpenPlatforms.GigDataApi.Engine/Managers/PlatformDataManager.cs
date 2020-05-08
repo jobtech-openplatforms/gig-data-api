@@ -46,6 +46,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         {
             var existingPlatformData = await GetPlatformData(userId, platformId, session, cancellationToken);
 
+            if (existingPlatformData == null)
+            {
+                return;
+            }
+
             session.Delete(existingPlatformData.Id);
         }
 

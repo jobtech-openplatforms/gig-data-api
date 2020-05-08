@@ -14,6 +14,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Common.Messages
             PlatformId = platformId;
             UserId = userId;
             AppId = appId;
+            PlatformConnectionState = platformConnectionState;
             Reason = reason;
         }
 
