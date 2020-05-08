@@ -346,6 +346,46 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                 .ToList();
         }
 
+        /// <summary>
+        /// Get a list of all connected platforms to an app for a given user.
+        /// </summary>
+        /// <remarks>
+        /// NOTE! This method uses the application secret. So this method is not suitable to call from the client side. It should solely be called from the backend of the app.
+        /// </remarks>
+        /// <param name="userId">The id of the user</param>
+        /// <param name="applicationSecretKey">The applications secret key.</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        [AllowAnonymous]
+        [HttpGet("{userId}/{applicationSecretKey}/connected")]
+        [Produces("application/json")]
+        public async Task<ActionResult<IEnumerable<PlatformViewModel>>> GetPlatformsConnectedToAppForUser(Guid userId, string applicationSecretKey,
+            CancellationToken cancellationToken)
+        {
+            using var session = _documentStore.OpenAsyncSession();
+            var app = await _appManager.GetAppFromSecretKey(applicationSecretKey, session, cancellationToken);
+            var user = await _userManager.GetUserByExternalId(userId, session);
+
+            //get platform connections for the user that the app is connected to
+            var platformConnectionsForApp = user.PlatformConnections.Where(pc => !(pc?.ConnectionInfo.IsDeleted ?? true) && 
+            (pc?.ConnectionInfo.NotificationInfos.Any(ci => ci.AppId == app.Id) ?? false));
+
+            if (!platformConnectionsForApp.Any())
+            {
+                return new List<PlatformViewModel>();
+            }
+
+            var platformsForApp = await _platformManager.GetPlatforms(platformConnectionsForApp.Select(pc => pc.PlatformId).ToList(), session, cancellationToken);
+
+
+            return platformsForApp.Values.Where(p => p != null).Select(p =>
+                    new PlatformViewModel(p.ExternalId, p.Name, p.Description, p.LogoUrl, p.WebsiteUrl,
+                        p.AuthenticationMechanism))
+                .ToList();
+        }
+
+
+
         [AllowAnonymous]
         [ApiExplorerSettings(IgnoreApi = true)]
         [HttpGet("freelancer/auth-complete")]
