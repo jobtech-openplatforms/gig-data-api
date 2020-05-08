@@ -14,12 +14,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core
         where TConnectionInfo : IPlatformConnectionInfo
     {
         private readonly IBus _bus;
-        private readonly ILogger<DataFetcherBase<TConnectionInfo>> _logger;
+        protected readonly ILogger<DataFetcherBase<TConnectionInfo>> Logger;
 
         protected DataFetcherBase(IBus bus, ILogger<DataFetcherBase<TConnectionInfo>> logger)
         {
             _bus = bus;
-            _logger = logger;
+            Logger = logger;
         }
 
         public Task<TConnectionInfo> StartDataFetch(string userId, string platformId, TConnectionInfo connectionInfo,
@@ -37,7 +37,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core
         protected async Task CompleteDataFetchWithConnectionRemoved(string userId, string platformId, PlatformConnectionDeleteReason deleteReason,
             CancellationToken cancellationToken = default)
         {
-            _logger.LogInformation("Will send PlatformConnectionRemovedMessage with delete reason {DeleteReason}.", deleteReason);
+            Logger.LogInformation("Will send PlatformConnectionRemovedMessage with delete reason {DeleteReason}.", deleteReason);
             await _bus.SendLocal(new PlatformConnectionRemovedMessage(userId, platformId, deleteReason));
         }
     }

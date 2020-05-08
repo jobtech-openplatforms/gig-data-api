@@ -27,48 +27,46 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
     public class GigPlatformDataFetcher : DataFetcherBase<OAuthOrEmailPlatformConnectionInfo>, IGigPlatformDataFetcher
     {
         private readonly IntermittentDataManager _intermittentDataManager;
-        private readonly ILogger<GigPlatformDataFetcher> _logger;
         private readonly GigPlatformApiClient _apiClient;
 
         public GigPlatformDataFetcher(IntermittentDataManager intermittentDataManager, GigPlatformApiClient apiClient,
-            IBus bus, ILogger<GigPlatformDataFetcher> logger) : base(bus)
+            IBus bus, ILogger<GigPlatformDataFetcher> logger) : base(bus, logger)
         {
             _intermittentDataManager = intermittentDataManager;
             _apiClient = apiClient;
-            _logger = logger;
         }
 
         public new async Task<OAuthOrEmailPlatformConnectionInfo> StartDataFetch(string userId, string platformId,
             OAuthOrEmailPlatformConnectionInfo connectionInfo, PlatformConnection platformConnection,
             CancellationToken cancellationToken = default)
         {
-            using var _ = _logger.BeginPropertyScope((LoggerPropertyNames.UserId, userId),
+            using var _ = Logger.BeginPropertyScope((LoggerPropertyNames.UserId, userId),
                 (LoggerPropertyNames.PlatformId, platformId), (LoggerPropertyNames.PlatformName, platformConnection.PlatformName));
 
-            _logger.LogInformation("Will start data fetch from a Gig platform integrated platform for user.");
+            Logger.LogInformation("Will start data fetch from a Gig platform integrated platform for user.");
 
             if (connectionInfo.IsOAuthAuthentication)
             {
-                _logger.LogError("Oauth connection not yet supported in Gig Platform API. Will throw.");
+                Logger.LogError("Oauth connection not yet supported in Gig Platform API. Will throw.");
                 throw new UnsupportedPlatformConnectionAuthenticationTypeException("Oauth connection not yet supported in Gig Platform API");
             }
 
             try
             {
                 var result = await _apiClient.RequestLatest(platformConnection.ExternalPlatformId, connectionInfo.Email, cancellationToken);
-                using var __ = _logger.BeginPropertyScope((LoggerPropertyNames.GigPlatformApiRequestId, result.RequestId));
+                using var __ = Logger.BeginPropertyScope((LoggerPropertyNames.GigPlatformApiRequestId, result.RequestId));
                 await _intermittentDataManager.RegisterRequestData(result.RequestId, userId, platformId);
             } 
             catch (ExternalServiceErrorException ex)
             {
                 //Error that can occur here is that we get either a 500, which means there is something wrong with platform api server. Or we get a 404, which means that the
                 //platform we asked the api to fetch data from does not exist on the api side of things. Both these cases should result in a retry. So we throw here.
-                _logger.LogError(ex, "Got error when regestering data fetch. Will throw.");
+                Logger.LogError(ex, "Got error when regestering data fetch. Will throw.");
                 throw new GigDataPlatformApiInitiateDataFetchException();
             }
 
 
-            _logger.LogInformation("Data fetch successfully started.");
+            Logger.LogInformation("Data fetch successfully started.");
             return connectionInfo;
         }
 
