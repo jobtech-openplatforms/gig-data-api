@@ -174,11 +174,42 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
             switch (rhs)
             {
                 case EmailPlatformConnectionInfo emailPlatformConnectionInfo:
-                    return new OAuthOrEmailPlatformConnectionInfo(emailPlatformConnectionInfo.Email);
+                    return new OAuthOrEmailPlatformConnectionInfo(emailPlatformConnectionInfo.Email) { 
+                        NotificationInfos = rhs.NotificationInfos, 
+                        IsDeleted = rhs.IsDeleted 
+                    };
                 case OAuthPlatformConnectionInfo oauthPlatformConnectionInfo:
-                    return new OAuthOrEmailPlatformConnectionInfo(oauthPlatformConnectionInfo.Token);
+                    return new OAuthOrEmailPlatformConnectionInfo(oauthPlatformConnectionInfo.Token) { 
+                        NotificationInfos = rhs.NotificationInfos, 
+                        IsDeleted = rhs.IsDeleted 
+                    };
                 default:
                     throw new Exception("Unable to create OAuthOrEmailPlatformConnectionInfo from type");
+            }
+        }
+
+        public static IPlatformConnectionInfo FromOAuthOrEmailPlatformConnectionInfo(OAuthOrEmailPlatformConnectionInfo oauthOrEmailConnectionInfo, IPlatformConnectionInfo target)
+        {
+            switch (target)
+            {
+                case EmailPlatformConnectionInfo emailPlatformConnectionInfo:
+                    if (oauthOrEmailConnectionInfo.Email != emailPlatformConnectionInfo.Email)
+                    {
+                        throw new Exception("Cannot convert oauth/email connection info to email connection info when emails differ");
+                    }
+                    emailPlatformConnectionInfo.IsDeleted = oauthOrEmailConnectionInfo.IsDeleted;
+                    emailPlatformConnectionInfo.NotificationInfos = oauthOrEmailConnectionInfo.NotificationInfos;
+                    return emailPlatformConnectionInfo;
+                case OAuthPlatformConnectionInfo oAuthPlatformConnectionInfo:
+                    if (oauthOrEmailConnectionInfo.Token == null)
+                    {
+                        throw new Exception("Cannot convert oauth/email connection info to oauth connection info");
+                    }
+                    oAuthPlatformConnectionInfo.IsDeleted = oauthOrEmailConnectionInfo.IsDeleted;
+                    oAuthPlatformConnectionInfo.NotificationInfos = oauthOrEmailConnectionInfo.NotificationInfos;
+                    return oAuthPlatformConnectionInfo;
+                default:
+                    throw new Exception("Unable to create IPlatformConnection from target type");
             }
         }
     }

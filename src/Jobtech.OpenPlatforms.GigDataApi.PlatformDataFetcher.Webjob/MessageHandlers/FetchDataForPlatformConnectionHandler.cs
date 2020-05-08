@@ -78,9 +78,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
                             "Data fetch for given platform integration type not implemented. Will forward message to error queue.");
                         return;
                     case PlatformIntegrationType.GigDataPlatformIntegration:
-                        connectionInfo = await _gigPlatformDataFetcher.StartDataFetch(message.UserId,
-                            message.PlatformId, OAuthOrEmailPlatformConnectionInfo.FromIPlatformConnectionInfo(connectionInfo),
+                        var oauthOrEmailPlatformConnectionInfo = OAuthOrEmailPlatformConnectionInfo.FromIPlatformConnectionInfo(connectionInfo);
+                        oauthOrEmailPlatformConnectionInfo = await _gigPlatformDataFetcher.StartDataFetch(message.UserId,
+                            message.PlatformId, oauthOrEmailPlatformConnectionInfo,
                             platformConnection, cancellationToken);
+                        connectionInfo = OAuthOrEmailPlatformConnectionInfo.FromOAuthOrEmailPlatformConnectionInfo(oauthOrEmailPlatformConnectionInfo, connectionInfo);
                         break;
                     case PlatformIntegrationType.FreelancerIntegration:
                         connectionInfo = await _freelancerDataFetcher.StartDataFetch(message.UserId, message.PlatformId,
