@@ -19,8 +19,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
         Task CompleteDataFetching(string userId, string platformId, PlatformDataFetchResult dataFetchResult,
             CancellationToken cancellationToken = default);
 
-        Task CompleteDataFetchingWithConnectionRemoved(string userId, string platformId, 
-            CancellationToken cancellationToken = default)
+        Task CompleteDataFetchingWithConnectionRemoved(string userId, string platformId,
+            CancellationToken cancellationToken = default);
     }
 
     public class GigPlatformDataFetcher : DataFetcherBase<OAuthOrEmailPlatformConnectionInfo>, IGigPlatformDataFetcher
