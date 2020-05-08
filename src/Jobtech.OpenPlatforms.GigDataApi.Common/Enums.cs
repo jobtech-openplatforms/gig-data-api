@@ -39,6 +39,7 @@
         /// <summary>
         /// For oauth platforms, when we cannot authorize with the given token info
         /// </summary>
-        NotAuthorized
+        NotAuthorized,
+        Undefined
     }
 }

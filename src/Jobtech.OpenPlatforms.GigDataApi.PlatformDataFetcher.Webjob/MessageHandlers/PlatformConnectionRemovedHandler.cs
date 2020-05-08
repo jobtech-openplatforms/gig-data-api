@@ -63,7 +63,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
                 return;
             }
 
-            if (message.DeleteReason != null) //if we have a delete reason, do soft delete
+            if (message.DeleteReason != Common.PlatformConnectionDeleteReason.Undefined) //if we have a delete reason, do soft delete
             {
                 _logger.LogInformation("Delete reason was {DeleteReason}. Will do soft delete", message.DeleteReason);
                 platformConnectionToRemove.ConnectionInfo.DeleteReason = message.DeleteReason;

@@ -8,11 +8,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core.Messages
         {
             UserId = userId;
             PlatformId = platformId;
-            DeleteReason = platformConnectionDeleteReason;
+            DeleteReason = platformConnectionDeleteReason ?? PlatformConnectionDeleteReason.Undefined;
         }
 
         public string UserId { get; private set; }
         public string PlatformId { get; private set; }
-        public PlatformConnectionDeleteReason? DeleteReason { get; private set; }
+        public PlatformConnectionDeleteReason DeleteReason { get; private set; }
     }
 }
