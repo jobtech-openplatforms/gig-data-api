@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core.Models;
@@ -30,10 +31,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core
             await _bus.SendLocal(new DataFetchCompleteMessage(userId, platformId, fetchResult));
         }
 
-        protected async Task CompleteDataFetchWithConnectionRemoved(string userId, string platformId,
+        protected async Task CompleteDataFetchWithConnectionRemoved(string userId, string platformId, PlatformConnectionDeleteReason deleteReason,
             CancellationToken cancellationToken = default)
         {
-            await _bus.SendLocal(new PlatformConnectionRemovedMessage(userId, platformId));
+            await _bus.SendLocal(new PlatformConnectionRemovedMessage(userId, platformId, deleteReason));
         }
     }
 }

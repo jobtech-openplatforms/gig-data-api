@@ -112,7 +112,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
     public interface IPlatformConnectionInfo
     {
         IList<NotificationInfo> NotificationInfos { get; set; }
-        bool IsDeleted { get; }
+        bool IsDeleted { get; set; }
+        PlatformConnectionDeleteReason? DeleteReason { get; set; }
     }
 
     public abstract class PlatformConnectionInfoBase : IPlatformConnectionInfo
@@ -124,6 +125,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
 
         public IList<NotificationInfo> NotificationInfos { get; set; }
         public bool IsDeleted { get; set; }
+        public PlatformConnectionDeleteReason? DeleteReason { get; set; }
     }
 
     public class OAuthPlatformConnectionInfo : PlatformConnectionInfoBase

@@ -188,7 +188,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
                 else if (message.ResultType == PlatformDataUpdateResultType.UserNotFound)
                 {
                     //we should remove the connection
-                    await _gigPlatformDataFetcher.CompleteDataFetchingWithConnectionRemoved(userId, platformId);
+                    await _gigPlatformDataFetcher.CompleteDataFetchingWithConnectionRemoved(userId, platformId, 
+                        PlatformConnectionDeleteReason.UserDidNotExist);
                 } 
                 else
                 {

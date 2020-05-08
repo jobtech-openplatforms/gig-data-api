@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Exceptions;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Extensions;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
@@ -19,7 +20,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
         Task CompleteDataFetching(string userId, string platformId, PlatformDataFetchResult dataFetchResult,
             CancellationToken cancellationToken = default);
 
-        Task CompleteDataFetchingWithConnectionRemoved(string userId, string platformId,
+        Task CompleteDataFetchingWithConnectionRemoved(string userId, string platformId, PlatformConnectionDeleteReason deleteReason,
             CancellationToken cancellationToken = default);
     }
 
@@ -77,9 +78,10 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
             await CompleteDataFetch(userId, platformId, dataFetchResult, cancellationToken);
         }
 
-        public async Task CompleteDataFetchingWithConnectionRemoved(string userId, string platformId, CancellationToken cancellationToken = default)
+        public async Task CompleteDataFetchingWithConnectionRemoved(string userId, string platformId, PlatformConnectionDeleteReason deleteReason, 
+            CancellationToken cancellationToken = default)
         {
-            await CompleteDataFetchWithConnectionRemoved(userId, platformId, cancellationToken);
+            await CompleteDataFetchWithConnectionRemoved(userId, platformId, deleteReason, cancellationToken);
         }
     }
 }

@@ -31,6 +31,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
         public async Task Handle(PlatformConnectionRemovedMessage message)
         {
             using var session = _documentStore.OpenAsyncSession();
+
+
             //remove connection
             var user = await session.LoadAsync<User>(message.UserId);
             var index = 0;
@@ -55,7 +57,16 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
                 return;
             }
 
-            user.PlatformConnections.RemoveAt(indexToRemove);
+            if (message.DeleteReason != null) //if we have a delete reason, do soft delete
+            {
+                platformConnectionToRemove.ConnectionInfo.DeleteReason = message.DeleteReason;
+                platformConnectionToRemove.ConnectionInfo.IsDeleted = true;
+            }
+            else //no reason given, do hard delete
+            {
+                user.PlatformConnections.RemoveAt(indexToRemove);
+            }
+
             await session.SaveChangesAsync();
 
             await _appNotificationManager.NotifyPlatformConnectionRemoved(message.UserId,

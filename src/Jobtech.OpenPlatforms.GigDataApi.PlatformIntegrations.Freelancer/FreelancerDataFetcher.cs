@@ -135,8 +135,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
         private async Task<OAuthPlatformConnectionInfo> HandleUnauthorized(string userId, string platformId)
         {
             //we do no longer have access to freelancer for the given connection
-            await CompleteDataFetchWithConnectionRemoved(userId, platformId);
-            return new OAuthPlatformConnectionInfo(null) { IsDeleted = true };
+            await CompleteDataFetchWithConnectionRemoved(userId, platformId, PlatformConnectionDeleteReason.NotAuthorized);
+            return new OAuthPlatformConnectionInfo(null) { IsDeleted = true, DeleteReason = PlatformConnectionDeleteReason.NotAuthorized };
         }
 
         private (IList<RatingDataFetchResult> Ratings, IList<ReviewDataFetchResult> Reviews) GetRatingsAndReviews(

@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Exceptions;
@@ -84,13 +85,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                 user.PlatformConnections.SingleOrDefault(pc => pc.ExternalPlatformId == platformId);
             if (connectionForPlatform != null)
             {
+                var isConnected = !connectionForPlatform?.ConnectionInfo?.IsDeleted ?? false;
                 return new PlatformUserConnectionInfoViewModel(platform.ExternalId, platform.Name,
-                    platform.Description, platform.LogoUrl, platform.WebsiteUrl, true,
-                    platform.AuthenticationMechanism);
+                    platform.Description, platform.LogoUrl, platform.WebsiteUrl, isConnected,
+                    platform.AuthenticationMechanism, connectionForPlatform.ConnectionInfo?.DeleteReason);
             }
 
             return new PlatformUserConnectionInfoViewModel(platform.ExternalId, platform.Name, platform.Description,
-                platform.LogoUrl, platform.WebsiteUrl, false, platform.AuthenticationMechanism);
+                platform.LogoUrl, platform.WebsiteUrl, false, platform.AuthenticationMechanism, null);
         }
 
         /// <summary>
@@ -115,11 +117,13 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
             foreach (var platform in platforms)
             {
-                var isConnected = user.PlatformConnections.Any(pc => pc.PlatformId == platform.Id);
+                var platformConnection = user.PlatformConnections.SingleOrDefault(pc => pc.PlatformId == platform.Id);
+                var isConnected = !platformConnection?.ConnectionInfo?.IsDeleted ?? false;
+                var disconnectReason = platformConnection?.ConnectionInfo?.DeleteReason;
                 platformUserConnectionInfoViewModels.Add(new PlatformUserConnectionInfoViewModel(
                     platform.ExternalId, platform.Name, platform.Description, platform.LogoUrl, platform.WebsiteUrl,
                     isConnected,
-                    platform.AuthenticationMechanism));
+                    platform.AuthenticationMechanism, disconnectReason));
             }
 
             return platformUserConnectionInfoViewModels;
@@ -390,8 +394,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             {
                 var platform = platforms.Single(p => p.Id == platformConnection.PlatformId);
                 Platforms.Add(new PlatformUserConnectionInfoViewModel(platform.ExternalId, platform.Name,
-                    platform.Description, platform.LogoUrl, platform.WebsiteUrl, true,
-                    platform.AuthenticationMechanism));
+                    platform.Description, platform.LogoUrl, platform.WebsiteUrl, !platformConnection?.ConnectionInfo.IsDeleted ?? false,
+                    platform.AuthenticationMechanism, platformConnection?.ConnectionInfo.DeleteReason));
 
                 foreach (var connectionInfoNotificationInfo in platformConnection.ConnectionInfo.NotificationInfos)
                 {
@@ -441,14 +445,16 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
     {
         public PlatformUserConnectionInfoViewModel(Guid externalPlatformId, string name, string description,
             string logoUrl, string websiteUrl, bool isConnected,
-            PlatformAuthenticationMechanism authMechanism) : base(externalPlatformId, name, description, logoUrl,
+            PlatformAuthenticationMechanism authMechanism, PlatformConnectionDeleteReason? disconnectedReason) : base(externalPlatformId, name, description, logoUrl,
             websiteUrl,
             authMechanism)
         {
             IsConnected = isConnected;
+            DisconnectedReason = disconnectedReason;
         }
 
         public bool IsConnected { get; private set; }
+        public PlatformConnectionDeleteReason? DisconnectedReason { get; private set; }
     }
 
     public class AppUserConnectionViewModel
