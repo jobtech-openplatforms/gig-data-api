@@ -88,11 +88,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                 var isConnected = !connectionForPlatform?.ConnectionInfo?.IsDeleted ?? false;
                 return new PlatformUserConnectionInfoViewModel(platform.ExternalId, platform.Name,
                     platform.Description, platform.LogoUrl, platform.WebsiteUrl, isConnected,
-                    platform.AuthenticationMechanism, connectionForPlatform.ConnectionInfo?.DeleteReason);
+                    platform.AuthenticationMechanism, connectionForPlatform.ConnectionInfo?.DeleteReason, connectionForPlatform.LastSuccessfulDataFetch);
             }
 
             return new PlatformUserConnectionInfoViewModel(platform.ExternalId, platform.Name, platform.Description,
-                platform.LogoUrl, platform.WebsiteUrl, false, platform.AuthenticationMechanism, null);
+                platform.LogoUrl, platform.WebsiteUrl, false, platform.AuthenticationMechanism, null, null);
         }
 
         /// <summary>
@@ -123,7 +123,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                 platformUserConnectionInfoViewModels.Add(new PlatformUserConnectionInfoViewModel(
                     platform.ExternalId, platform.Name, platform.Description, platform.LogoUrl, platform.WebsiteUrl,
                     isConnected,
-                    platform.AuthenticationMechanism, disconnectReason));
+                    platform.AuthenticationMechanism, disconnectReason, platformConnection.LastSuccessfulDataFetch));
             }
 
             return platformUserConnectionInfoViewModels;
@@ -303,8 +303,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
             await session.SaveChangesAsync(cancellationToken);
 
-            //temp
-            return Ok();
+            return Ok("Data fetch initiated");
         }
 
         /// <summary>
@@ -395,7 +394,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                 var platform = platforms.Single(p => p.Id == platformConnection.PlatformId);
                 Platforms.Add(new PlatformUserConnectionInfoViewModel(platform.ExternalId, platform.Name,
                     platform.Description, platform.LogoUrl, platform.WebsiteUrl, !platformConnection?.ConnectionInfo.IsDeleted ?? false,
-                    platform.AuthenticationMechanism, platformConnection?.ConnectionInfo.DeleteReason));
+                    platform.AuthenticationMechanism, platformConnection?.ConnectionInfo.DeleteReason, platformConnection.LastSuccessfulDataFetch));
 
                 foreach (var connectionInfoNotificationInfo in platformConnection.ConnectionInfo.NotificationInfos)
                 {
@@ -445,16 +444,18 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
     {
         public PlatformUserConnectionInfoViewModel(Guid externalPlatformId, string name, string description,
             string logoUrl, string websiteUrl, bool isConnected,
-            PlatformAuthenticationMechanism authMechanism, PlatformConnectionDeleteReason? disconnectedReason) : base(externalPlatformId, name, description, logoUrl,
+            PlatformAuthenticationMechanism authMechanism, PlatformConnectionDeleteReason? disconnectedReason, DateTimeOffset? lastDataFetchTimeStamp) : base(externalPlatformId, name, description, logoUrl,
             websiteUrl,
             authMechanism)
         {
             IsConnected = isConnected;
             DisconnectedReason = disconnectedReason;
+            LastDataFetchTimeStamp = lastDataFetchTimeStamp?.ToUnixTimeSeconds();
         }
 
         public bool IsConnected { get; private set; }
         public PlatformConnectionDeleteReason? DisconnectedReason { get; private set; }
+        public long? LastDataFetchTimeStamp { get; private set; }
     }
 
     public class AppUserConnectionViewModel
