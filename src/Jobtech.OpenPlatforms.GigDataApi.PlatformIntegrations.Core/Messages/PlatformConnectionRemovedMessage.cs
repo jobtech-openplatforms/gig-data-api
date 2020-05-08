@@ -4,11 +4,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core.Messages
 {
     public class PlatformConnectionRemovedMessage
     {
-        public PlatformConnectionRemovedMessage(string userId, string platformId, PlatformConnectionDeleteReason? platformConnectionDeleteReason = null)
+        public PlatformConnectionRemovedMessage(string userId, string platformId, PlatformConnectionDeleteReason platformConnectionDeleteReason)
         {
             UserId = userId;
             PlatformId = platformId;
-            DeleteReason = platformConnectionDeleteReason ?? PlatformConnectionDeleteReason.Undefined;
+            DeleteReason = platformConnectionDeleteReason;
         }
 
         public string UserId { get; private set; }
