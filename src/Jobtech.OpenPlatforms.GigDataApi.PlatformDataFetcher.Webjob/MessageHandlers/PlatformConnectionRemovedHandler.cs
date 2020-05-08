@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Jobtech.OpenPlatforms.GigDataApi.Common.Extensions;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core.Messages;
@@ -30,6 +31,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
         public async Task Handle(PlatformConnectionRemovedMessage message)
         {
+            _logger.BeginPropertyScope((LoggerPropertyNames.PlatformId, message.PlatformId), 
+                (LoggerPropertyNames.UserId, message.UserId), 
+                ("DeleteReason", message.DeleteReason));
+            _logger.LogInformation("Will remove platform connection");
+
             using var session = _documentStore.OpenAsyncSession();
 
 
@@ -59,11 +65,13 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             if (message.DeleteReason != null) //if we have a delete reason, do soft delete
             {
+                _logger.LogInformation("Delete reason was {DeleteReason}. Will do soft delete", message.DeleteReason);
                 platformConnectionToRemove.ConnectionInfo.DeleteReason = message.DeleteReason;
                 platformConnectionToRemove.ConnectionInfo.IsDeleted = true;
             }
             else //no reason given, do hard delete
             {
+                _logger.LogInformation("No delete reason was given. Will do hard delete");
                 user.PlatformConnections.RemoveAt(indexToRemove);
             }
 

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Common;
+using Jobtech.OpenPlatforms.GigDataApi.Common.Extensions;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core.Models;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform.Exceptions;
@@ -35,6 +36,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
 
         public async Task Handle(PlatformUserUpdateDataMessage message)
         {
+            _logger.BeginPropertyScope((LoggerPropertyNames.GigPlatformApiRequestId, message.RequestId), ("ResultType", message.ResultType));
+
             _logger.LogInformation($"Got data fetch result for request id {message.RequestId}");
 
             string userId = null;
@@ -183,16 +186,20 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
                 if (message.ResultType == PlatformDataUpdateResultType.Succeess || 
                     message.ResultType == PlatformDataUpdateResultType.MalformedDataResponse)
                 {
+                    _logger.LogInformation("Got result type {ResultType}. Will complete data fetching.", message.ResultType);
                     await _gigPlatformDataFetcher.CompleteDataFetching(userId, platformId, null);
                 } 
                 else if (message.ResultType == PlatformDataUpdateResultType.UserNotFound)
                 {
+                    _logger.LogInformation("Got result type {ResultType}. User was not found. Will complete data fetching and signal that connection should be removed.",
+                        message.ResultType);
                     //we should remove the connection
                     await _gigPlatformDataFetcher.CompleteDataFetchingWithConnectionRemoved(userId, platformId, 
                         PlatformConnectionDeleteReason.UserDidNotExist);
                 } 
                 else
                 {
+                    _logger.LogInformation("Got result type {ResultType}. Will schdule new data fetch.", message.ResultType);
                     //communication error, we should enqueue a new request to try to retrieve the data again.
                     var fetchMessage = new FetchDataForPlatformConnectionMessage(userId, platformId, PlatformIntegrationType.GigDataPlatformIntegration);
                     await _bus.DeferLocal(new TimeSpan(0,0,30), fetchMessage);
