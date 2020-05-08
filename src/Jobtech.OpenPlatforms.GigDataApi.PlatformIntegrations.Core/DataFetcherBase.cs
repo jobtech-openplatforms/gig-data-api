@@ -39,7 +39,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core
         {
             Logger.LogInformation("Will send PlatformConnectionRemovedMessage with delete reason {DeleteReason}.", deleteReason);
             var message = new PlatformConnectionRemovedMessage(userId, platformId, deleteReason);
-            Logger.LogInformation("The message contains the following delete reason: {DeleteReason}", message.DeleteReason);
             await _bus.SendLocal(message);
         }
     }
