@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Api.Configuration;
+using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Engine.Managers;
 using Microsoft.AspNetCore.Authorization;
@@ -12,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
+using Rebus.Bus;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 {
@@ -28,13 +30,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         private readonly IAppNotificationManager _appNotificationManager;
         private readonly IUserManager _userManager;
         private readonly EmailVerificationConfiguration _emailVerificationConfiguration;
+        private readonly IBus _bus;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         public EmailValidationController(IEmailValidatorManager emailValidatorManager,
             IPlatformConnectionManager platformConnectionManager, IPlatformManager platformManager,
             IAppManager appManager, IAppNotificationManager appNotificationManager, IUserManager userManager,
             IOptions<EmailVerificationConfiguration> emailVerificationOptions,
-            IDocumentStore documentStore, IHttpContextAccessor httpContextAccessor)
+            IDocumentStore documentStore, IBus bus, IHttpContextAccessor httpContextAccessor)
         {
             _emailValidatorManager = emailValidatorManager;
             _platformConnectionManager = platformConnectionManager;
@@ -44,6 +47,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             _userManager = userManager;
             _emailVerificationConfiguration = emailVerificationOptions.Value;
             _documentStore = documentStore;
+            _bus = bus;
             _httpContextAccessor = httpContextAccessor;
         }
 
@@ -57,6 +61,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
             var user = await session.LoadAsync<User>(prompt.UserId, cancellationToken);
 
+            var platformConnectionInfos = new Dictionary<string, (PlatformConnection PlatformConnection, PlatformIntegrationType PlatformIntegrationType)>();
+
             if (prompt.Result.HasValue)
             {
                 var userEmail = user.UserEmails.Single(ue => ue.Email == prompt.EmailAddress);
@@ -66,8 +72,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                 {
                     var appIds = prompt.PlatformIdToAppId.Values.SelectMany(v => v).Distinct();
                     var apps = await session.LoadAsync<App>(appIds, cancellationToken);
-
-                    
 
                     foreach (var platformId in prompt.PlatformIdToAppId.Keys)
                     {
@@ -86,11 +90,17 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                         {
                             var app = apps[appId];
 
-                            await _platformConnectionManager.ConnectUserToEmailPlatform(platform.ExternalId, user,
+                            var (_, platformConnection, _) = await _platformConnectionManager.ConnectUserToEmailPlatform(platform.ExternalId, user,
                                 app,
                                 prompt.EmailAddress, _emailVerificationConfiguration.AcceptUrl,
                                 _emailVerificationConfiguration.DeclineUrl, prompt.PlatformDataClaim, session, true,
                                 cancellationToken);
+
+                            if (!platformConnectionInfos.ContainsKey(platformId))
+                            {
+                                platformConnectionInfos.Add(platformId, (platformConnection, platform.IntegrationType));
+                            }
+                            
 
                             if (appIdsToNotify.All(aid => aid != appId))
                             {
@@ -108,6 +118,17 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             }
 
             await session.SaveChangesAsync(cancellationToken);
+
+            foreach (var platformId in platformConnectionInfos.Keys)
+            {
+                var info = platformConnectionInfos[platformId];
+                if (info.PlatformConnection == null)
+                {
+                    continue;
+                }
+
+                await _platformManager.TriggerDataFetch(user.Id, info.PlatformConnection, info.PlatformIntegrationType, _bus);
+            }
 
             return Ok();
         }

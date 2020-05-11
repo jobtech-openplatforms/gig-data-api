@@ -395,9 +395,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             var freelancerExternalId = _options.PlatformExternalIds["Freelancer"];
 
             using var session = _documentStore.OpenAsyncSession();
-            var redirectUrl = await _platformConnectionManager.CompleteConnectUserToOAuthPlatform(freelancerExternalId,
-                code, state, session, cancellationToken);
+            var (redirectUrl, platformConnection, userId, platformIntegrationType) = 
+                await _platformConnectionManager.CompleteConnectUserToOAuthPlatform(freelancerExternalId, 
+                    code, state, session, cancellationToken);
             await session.SaveChangesAsync(cancellationToken);
+
+            await _platformManager.TriggerDataFetch(userId, platformConnection, platformIntegrationType, _bus);
 
             return Redirect(redirectUrl);
         }

@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
+using Rebus.Bus;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 {
@@ -28,11 +29,13 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         private readonly IPlatformManager _platformManager;
         private readonly IUserManager _userManager;
         private readonly IAppManager _appManager;
+        private readonly IBus _bus;
         private readonly EmailVerificationConfiguration _emailVerificationConfiguration;
 
         public PlatformUserController(IDocumentStore documentStore, IHttpContextAccessor httpContextAccessor,
             IPlatformConnectionManager platformConnectionManager, IAppNotificationManager appNotificationManager,
-            IPlatformManager platformManager, IUserManager userManager, IAppManager appManager, IOptions<EmailVerificationConfiguration> emailVerificationOptions)
+            IPlatformManager platformManager, IUserManager userManager, IAppManager appManager, IBus bus,
+            IOptions<EmailVerificationConfiguration> emailVerificationOptions)
         {
             _documentStore = documentStore;
             _httpContextAccessor = httpContextAccessor;
@@ -41,6 +44,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             _platformManager = platformManager;
             _userManager = userManager;
             _appManager = appManager;
+            _bus = bus;
             _emailVerificationConfiguration = emailVerificationOptions.Value;
         }
 
@@ -57,11 +61,16 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
             var app = await _appManager.GetAppFromApplicationId(model.ApplicationId, session, cancellationToken);
 
-            var authorizationResult = await _platformConnectionManager.StartConnectUserToOauthPlatform(model.PlatformId,
+            var (authorizationResult, platformConnection, platformIntegrationType) = await _platformConnectionManager.StartConnectUserToOauthPlatform(model.PlatformId,
                 existingUser, app, model.PlatformDataClaim,
                 model.CallbackUri, session, cancellationToken);
 
             await session.SaveChangesAsync(cancellationToken);
+
+            if (platformConnection != null)
+            {
+                await _platformManager.TriggerDataFetch(existingUser.Id, platformConnection, platformIntegrationType, _bus);
+            }
 
             return new StartPlatformOauthConnectionResultViewModel(authorizationResult.State,
                 authorizationResult.OAuthAuthenticationUrl);
@@ -111,15 +120,20 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
             var app = await _appManager.GetAppFromApplicationId(model.ApplicationId, session, cancellationToken);
 
-            var result = await _platformConnectionManager.ConnectUserToEmailPlatform(model.PlatformId, existingUser,
-                app,
-                model.PlatformUserEmailAddress, _emailVerificationConfiguration.AcceptUrl,
-                _emailVerificationConfiguration.DeclineUrl, model.PlatformDataClaim,
-                session, cancellationToken: cancellationToken);
+            var (platformConnectionStartResult, platformConnection, platformIntegrationType) =
+                await _platformConnectionManager.ConnectUserToEmailPlatform(model.PlatformId, existingUser,
+                    app, model.PlatformUserEmailAddress, _emailVerificationConfiguration.AcceptUrl,
+                    _emailVerificationConfiguration.DeclineUrl, model.PlatformDataClaim,
+                    session, cancellationToken: cancellationToken);
 
             await session.SaveChangesAsync(cancellationToken);
 
-            return new PlatformConnectionResultViewModel(result.State);
+            if (platformConnection != null)
+            {
+                await _platformManager.TriggerDataFetch(existingUser.Id, platformConnection, platformIntegrationType, _bus);
+            }
+
+            return new PlatformConnectionResultViewModel(platformConnectionStartResult.State);
         }
     }
 
