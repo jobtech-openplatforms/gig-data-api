@@ -130,6 +130,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
                 await _platformManager.TriggerDataFetch(user.Id, info.PlatformConnection, info.PlatformIntegrationType, _bus);
             }
 
+            await session.SaveChangesAsync(cancellationToken);
+
             return Ok();
         }
 

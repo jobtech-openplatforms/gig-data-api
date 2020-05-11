@@ -70,6 +70,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             if (platformConnection != null)
             {
                 await _platformManager.TriggerDataFetch(existingUser.Id, platformConnection, platformIntegrationType, _bus);
+                await session.SaveChangesAsync(cancellationToken);
             }
 
             return new StartPlatformOauthConnectionResultViewModel(authorizationResult.State,
@@ -131,6 +132,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             if (platformConnection != null)
             {
                 await _platformManager.TriggerDataFetch(existingUser.Id, platformConnection, platformIntegrationType, _bus);
+                await session.SaveChangesAsync(cancellationToken);
             }
 
             return new PlatformConnectionResultViewModel(platformConnectionStartResult.State);
