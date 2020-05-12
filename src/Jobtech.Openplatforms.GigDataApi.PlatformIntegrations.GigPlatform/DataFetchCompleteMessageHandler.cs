@@ -42,10 +42,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
 
             string userId = null;
             string platformId = null;
+            string syncLogId = null;
 
             try
             {
-                (userId, platformId) = await _intermittentDataManager.GetRequestData(message.RequestId);
+                (userId, platformId, syncLogId) = await _intermittentDataManager.GetRequestData(message.RequestId);
             }
             catch (CacheDataNotFoundException)
             {
@@ -179,7 +180,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
                     mappedAchievements, message.PlatformData.RawData);
 
 
-                await _gigPlatformDataFetcher.CompleteDataFetching(userId, platformId, platformDataFetchResult);
+                await _gigPlatformDataFetcher.CompleteDataFetching(userId, platformId, platformDataFetchResult, syncLogId);
             }
             else
             {
@@ -187,7 +188,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
                     message.ResultType == PlatformDataUpdateResultType.MalformedDataResponse)
                 {
                     _logger.LogInformation("Got result type {ResultType}. Will complete data fetching.", message.ResultType);
-                    await _gigPlatformDataFetcher.CompleteDataFetching(userId, platformId, null);
+                    await _gigPlatformDataFetcher.CompleteDataFetching(userId, platformId, null, syncLogId);
                 } 
                 else if (message.ResultType == PlatformDataUpdateResultType.UserNotFound)
                 {
@@ -195,7 +196,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
                         message.ResultType);
                     //we should remove the connection
                     await _gigPlatformDataFetcher.CompleteDataFetchingWithConnectionRemoved(userId, platformId, 
-                        PlatformConnectionDeleteReason.UserDidNotExist);
+                        PlatformConnectionDeleteReason.UserDidNotExist, syncLogId);
                 } 
                 else
                 {

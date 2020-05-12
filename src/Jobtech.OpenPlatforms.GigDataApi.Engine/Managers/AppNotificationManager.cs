@@ -24,7 +24,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             IAsyncDocumentSession session, CancellationToken cancellationToken = default);
 
         Task NotifyPlatformConnectionSynced(string userId, IList<string> appIds, string platformId,
-            IAsyncDocumentSession session, CancellationToken cancellationToken = default);
+            string syncLogId, IAsyncDocumentSession session, CancellationToken cancellationToken = default);
     }
 
     public class AppNotificationManager : IAppNotificationManager
@@ -42,14 +42,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             string platformId, IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
             await NotifyPlatformDataUpdate(userId, appIds, platformId, session,
-                PlatformConnectionState.AwaitingOAuthAuthentication, cancellationToken);
+                PlatformConnectionState.AwaitingOAuthAuthentication, cancellationToken: cancellationToken);
         }
 
         public async Task NotifyPlatformConnectionAwaitingEmailVerification(string userId, IList<string> appIds,
             string platformId, IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
             await NotifyPlatformDataUpdate(userId, appIds, platformId, session,
-                PlatformConnectionState.AwaitingEmailVerification, cancellationToken);
+                PlatformConnectionState.AwaitingEmailVerification, cancellationToken: cancellationToken);
         }
 
         public async Task NotifyPlatformConnectionDataUpdate(string userId, IList<string> appIds,
@@ -63,31 +63,32 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             }
 
             await NotifyPlatformDataUpdate(userId, appIds, platformId, session, platformConnectionState,
-                cancellationToken);
+                cancellationToken: cancellationToken);
         }
 
         public async Task NotifyPlatformConnectionRemoved(string userId, IList<string> appIds, string platformId,
             IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
             await NotifyPlatformDataUpdate(userId, appIds, platformId, session, PlatformConnectionState.Removed,
-                cancellationToken);
+                cancellationToken: cancellationToken);
         }
 
         public async Task NotifyPlatformConnectionSynced(string userId, IList<string> appIds, string platformId,
-            IAsyncDocumentSession session, CancellationToken cancellationToken = default)
+            string syncLogId, IAsyncDocumentSession session, CancellationToken cancellationToken = default)
         {
             await NotifyPlatformDataUpdate(userId, appIds, platformId, session, PlatformConnectionState.Synced,
-                cancellationToken);
+                syncLogId, cancellationToken);
         }
 
         private async Task NotifyPlatformDataUpdate(string userId, IList<string> appIds, string platformId,
             IAsyncDocumentSession session, PlatformConnectionState connectionState = PlatformConnectionState.Connected,
+            string syncLogId = null,
             CancellationToken cancellationToken = default)
         {
             var apps = await session.LoadAsync<App>(appIds, cancellationToken);
 
             foreach (var message in apps.Values.Select(app => new Common.Messages.PlatformConnectionUpdateNotificationMessage(platformId, userId,
-                app.Id, connectionState)))
+                app.Id, connectionState, syncLogId)))
             {
                 await _bus.Send(message);
             }

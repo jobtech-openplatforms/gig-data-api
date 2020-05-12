@@ -17,11 +17,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
 {
     public interface IGigPlatformDataFetcher : IDataFetcher<OAuthOrEmailPlatformConnectionInfo>
     {
-        Task CompleteDataFetching(string userId, string platformId, PlatformDataFetchResult dataFetchResult,
+        Task CompleteDataFetching(string userId, string platformId, PlatformDataFetchResult dataFetchResult, string syncLogId,
             CancellationToken cancellationToken = default);
 
         Task CompleteDataFetchingWithConnectionRemoved(string userId, string platformId, PlatformConnectionDeleteReason deleteReason,
-            CancellationToken cancellationToken = default);
+            string syncLogId, CancellationToken cancellationToken = default);
     }
 
     public class GigPlatformDataFetcher : DataFetcherBase<OAuthOrEmailPlatformConnectionInfo>, IGigPlatformDataFetcher
@@ -37,7 +37,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
         }
 
         public new async Task<OAuthOrEmailPlatformConnectionInfo> StartDataFetch(string userId, string platformId,
-            OAuthOrEmailPlatformConnectionInfo connectionInfo, PlatformConnection platformConnection,
+            OAuthOrEmailPlatformConnectionInfo connectionInfo, PlatformConnection platformConnection, DataSyncLog syncLog,
             CancellationToken cancellationToken = default)
         {
             using var _ = Logger.BeginPropertyScope((LoggerPropertyNames.UserId, userId),
@@ -55,31 +55,33 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
             {
                 var result = await _apiClient.RequestLatest(platformConnection.ExternalPlatformId, connectionInfo.Email, cancellationToken);
                 using var __ = Logger.BeginPropertyScope((LoggerPropertyNames.GigPlatformApiRequestId, result.RequestId));
-                await _intermittentDataManager.RegisterRequestData(result.RequestId, userId, platformId);
+                await _intermittentDataManager.RegisterRequestData(result.RequestId, userId, platformId, syncLog.Id);
             } 
             catch (ExternalServiceErrorException ex)
             {
                 //Error that can occur here is that we get either a 500, which means there is something wrong with platform api server. Or we get a 404, which means that the
                 //platform we asked the api to fetch data from does not exist on the api side of things. Both these cases should result in a retry. So we throw here.
-                Logger.LogError(ex, "Got error when regestering data fetch. Will throw.");
+                var logMessage = "Got error when regestering data fetch. Will throw.";
+                Logger.LogError(ex, logMessage);
+                syncLog.Steps.Add(new DataSyncStep(DataSyncStepType.PlatformDataFetch, DataSyncStepState.Failed, logMessage: logMessage));
                 throw new GigDataPlatformApiInitiateDataFetchException();
             }
 
-
+            syncLog.Steps.Add(new DataSyncStep(DataSyncStepType.PlatformDataFetch, DataSyncStepState.Started));
             Logger.LogInformation("Data fetch successfully started.");
             return connectionInfo;
         }
 
         public async Task CompleteDataFetching(string userId, string platformId,
-            PlatformDataFetchResult dataFetchResult, CancellationToken cancellationToken = default)
+            PlatformDataFetchResult dataFetchResult, string syncLogId, CancellationToken cancellationToken = default)
         {
-            await CompleteDataFetch(userId, platformId, dataFetchResult, cancellationToken);
+            await CompleteDataFetch(userId, platformId, dataFetchResult, syncLogId, cancellationToken);
         }
 
         public async Task CompleteDataFetchingWithConnectionRemoved(string userId, string platformId, PlatformConnectionDeleteReason deleteReason, 
-            CancellationToken cancellationToken = default)
+            string syncLogId, CancellationToken cancellationToken = default)
         {
-            await CompleteDataFetchWithConnectionRemoved(userId, platformId, deleteReason, cancellationToken);
+            await CompleteDataFetchWithConnectionRemoved(userId, platformId, deleteReason, syncLogId, cancellationToken);
         }
     }
 }

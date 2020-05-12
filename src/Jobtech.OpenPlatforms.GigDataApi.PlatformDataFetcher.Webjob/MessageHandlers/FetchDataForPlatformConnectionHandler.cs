@@ -67,6 +67,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             var connectionInfo = platformConnection.ConnectionInfo;
 
+            var syncLog = new DataSyncLog(user.Id, message.PlatformId);
+            await session.StoreAsync(syncLog);
+
             try
             {
                 switch (message.PlatformIntegrationType)
@@ -74,30 +77,38 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
                     case PlatformIntegrationType.AirbnbIntegration:
                     case PlatformIntegrationType.UpworkIntegration:
                     case PlatformIntegrationType.Manual:
-                        await LogErrorAndForwardMessageToErrorQueue(
-                            "Data fetch for given platform integration type not implemented. Will forward message to error queue.");
+                        var logMessage1 = "Data fetch for given platform integration type not implemented. Will forward message to error queue.";
+                        await LogErrorAndForwardMessageToErrorQueue(logMessage1);
+                        syncLog.Steps.Add(new DataSyncStep(DataSyncStepType.PlatformDataFetch, DataSyncStepState.Failed, logMessage: logMessage1));
+                        await session.SaveChangesAsync(cancellationToken);
                         return;
                     case PlatformIntegrationType.GigDataPlatformIntegration:
                         var oauthOrEmailPlatformConnectionInfo = OAuthOrEmailPlatformConnectionInfo.FromIPlatformConnectionInfo(connectionInfo);
                         oauthOrEmailPlatformConnectionInfo = await _gigPlatformDataFetcher.StartDataFetch(message.UserId,
                             message.PlatformId, oauthOrEmailPlatformConnectionInfo,
-                            platformConnection, cancellationToken);
+                            platformConnection, syncLog, cancellationToken);
                         connectionInfo = OAuthOrEmailPlatformConnectionInfo.FromOAuthOrEmailPlatformConnectionInfo(oauthOrEmailPlatformConnectionInfo, connectionInfo);
                         break;
                     case PlatformIntegrationType.FreelancerIntegration:
                         connectionInfo = await _freelancerDataFetcher.StartDataFetch(message.UserId, message.PlatformId,
-                            (OAuthPlatformConnectionInfo) connectionInfo, platformConnection, cancellationToken);
+                            (OAuthPlatformConnectionInfo) connectionInfo, platformConnection, syncLog, cancellationToken);
+                        syncLog.Steps.Add(new DataSyncStep(DataSyncStepType.PlatformDataFetch, DataSyncStepState.Started));
                         break;
                     default:
-                        await LogErrorAndForwardMessageToErrorQueue(
-                            "Unrecognized platform integration type. Will forward message to error queue.");
+                        var logMessage2 = "Unrecognized platform integration type. Will forward message to error queue.";
+                        await LogErrorAndForwardMessageToErrorQueue(logMessage2);
+                        syncLog.Steps.Add(new DataSyncStep(DataSyncStepType.PlatformDataFetch, DataSyncStepState.Failed, logMessage: logMessage2));
+                        await session.SaveChangesAsync(cancellationToken);
                         return;
                 }
             }
             catch (UnsupportedPlatformConnectionAuthenticationTypeException ex)
             {
+                var logMessage = "Unsupported connection authentication type. Will forward message to error queue.";
                 await LogErrorAndForwardMessageToErrorQueue(
                     "Unsupported connection authentication type. Will forward message to error queue.", ex);
+                syncLog.Steps.Add(new DataSyncStep(DataSyncStepType.PlatformDataFetch, DataSyncStepState.Failed, logMessage: logMessage));
+                await session.SaveChangesAsync(cancellationToken);
                 return;
             }
 

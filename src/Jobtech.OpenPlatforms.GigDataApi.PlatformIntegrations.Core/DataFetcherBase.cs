@@ -23,22 +23,22 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core
         }
 
         public Task<TConnectionInfo> StartDataFetch(string userId, string platformId, TConnectionInfo connectionInfo,
-            PlatformConnection platformConnection, CancellationToken cancellationToken = default)
+            PlatformConnection platformConnection, DataSyncLog syncLog, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
 
-        protected async Task CompleteDataFetch(string userId, string platformId, PlatformDataFetchResult fetchResult,
+        protected async Task CompleteDataFetch(string userId, string platformId, PlatformDataFetchResult fetchResult, string syncLogId,
             CancellationToken cancellationToken = default)
         {
-            await _bus.SendLocal(new DataFetchCompleteMessage(userId, platformId, fetchResult));
+            await _bus.SendLocal(new DataFetchCompleteMessage(userId, platformId, fetchResult, syncLogId));
         }
 
         protected async Task CompleteDataFetchWithConnectionRemoved(string userId, string platformId, PlatformConnectionDeleteReason deleteReason,
-            CancellationToken cancellationToken = default)
+            string syncLogId, CancellationToken cancellationToken = default)
         {
             Logger.LogInformation("Will send PlatformConnectionRemovedMessage with delete reason {DeleteReason}.", deleteReason);
-            var message = new PlatformConnectionRemovedMessage(userId, platformId, deleteReason);
+            var message = new PlatformConnectionRemovedMessage(userId, platformId, deleteReason, syncLogId);
             await _bus.SendLocal(message);
         }
     }

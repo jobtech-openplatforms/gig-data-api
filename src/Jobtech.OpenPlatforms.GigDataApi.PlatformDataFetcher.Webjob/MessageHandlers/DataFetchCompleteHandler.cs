@@ -51,11 +51,16 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
             var cancellationToken = _messageContext.GetCancellationToken();
 
             using var session = _documentStore.OpenAsyncSession();
+
+            var syncLog = await session.LoadAsync<DataSyncLog>(message.SyncLogId);
+            syncLog.Steps.Add(new DataSyncStep(DataSyncStepType.PlatformDataFetch, DataSyncStepState.Succeeded));
+
             var (platformDataId, platformConnection) = await HandleFetchDataResult(message.UserId, message.PlatformId,
                 message.Result, session, cancellationToken);
 
             if (platformDataId == null)
             {
+                await session.SaveChangesAsync();
                 return;
             }
 
@@ -69,7 +74,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             await _appNotificationManager.NotifyPlatformConnectionSynced(message.UserId,
                 platformConnection.ConnectionInfo.NotificationInfos.Select(ni => ni.AppId).ToList(),
-                platformConnection.PlatformId, session, cancellationToken);
+                platformConnection.PlatformId, syncLog.Id, session, cancellationToken);
 
             _logger.LogInformation("Applications have been notified.");
         }

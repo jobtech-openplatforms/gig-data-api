@@ -61,6 +61,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
                 (LoggerPropertyNames.UserId, message.UserId));
 
             using var session = _documentStore.OpenAsyncSession();
+            DataSyncLog syncLog = null;
+            if (!string.IsNullOrEmpty(message.SyncLogId))
+            {
+                syncLog = await session.LoadAsync<DataSyncLog>(message.SyncLogId);
+            }
 
             var cancellationToken = _messageContext.GetCancellationToken();
 
@@ -68,9 +73,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             if (user == null)
             {
-                _logger.LogWarning(
-                    $"User with given id does not exist. Will move message to error queue.");
+                var logMessage = "User with given id does not exist. Will move message to error queue.";
+                _logger.LogWarning(logMessage);
+                syncLog?.Steps.Add(new DataSyncStep(DataSyncStepType.AppNotification, DataSyncStepState.Failed, logMessage));
                 await _bus.Advanced.TransportMessage.Forward(_rebusConfiguration.ErrorQueueName);
+                await session.SaveChangesAsync();
                 return;
             }
 
@@ -78,19 +85,23 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             if (app == null)
             {
-                _logger.LogWarning(
-                    $"App with given id does not exist. Will move message to error queue.");
+                var logMessage = "App with given id does not exist. Will move message to error queue.";
+                _logger.LogWarning(logMessage);
+                syncLog?.Steps.Add(new DataSyncStep(DataSyncStepType.AppNotification, DataSyncStepState.Failed, logMessage));
                 await _bus.Advanced.TransportMessage.Forward(_rebusConfiguration.ErrorQueueName);
+                await session.SaveChangesAsync();
                 return;
             }
 
-            var platform = await session.LoadAsync<Core.Entities.Platform>(message.PlatformId, cancellationToken);
+            var platform = await session.LoadAsync<Platform>(message.PlatformId, cancellationToken);
 
             if (platform == null)
             {
-                _logger.LogWarning(
-                    $"Platform with given id does not exist. Will move message to error queue.");
+                var logMessage = "Platform with given id does not exist. Will move message to error queue.";
+                _logger.LogWarning(logMessage);
+                syncLog?.Steps.Add(new DataSyncStep(DataSyncStepType.AppNotification, DataSyncStepState.Failed, logMessage, app.Id, app.DataUpdateCallbackUrl));
                 await _bus.Advanced.TransportMessage.Forward(_rebusConfiguration.ErrorQueueName);
+                await session.SaveChangesAsync();
                 return;
             }
 
@@ -145,21 +156,29 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             if (string.IsNullOrWhiteSpace(app.DataUpdateCallbackUrl))
             {
-                _logger.LogWarning(
-                    $"No notification endpoint was given. Will move message to error queue.");
+                var logMessage = "No notification endpoint was given. Will move message to error queue.";
+                _logger.LogWarning(logMessage);
+                syncLog?.Steps.Add(new DataSyncStep(DataSyncStepType.AppNotification, DataSyncStepState.Failed, logMessage, app.Id, app.DataUpdateCallbackUrl));
                 await _bus.Advanced.TransportMessage.Forward(_rebusConfiguration.ErrorQueueName);
+                await session.SaveChangesAsync();
                 return;
             }
 
             if (!Uri.TryCreate(app.DataUpdateCallbackUrl, UriKind.Absolute, out var uri))
             {
                 _logger.LogError("Could not create uri from {DataCallbackUrl}. Will ignore message.", app.DataUpdateCallbackUrl);
+                syncLog?.Steps.Add(new DataSyncStep(DataSyncStepType.AppNotification, DataSyncStepState.Failed, 
+                    "Could not create uri from app data callback url. Will ignore message.", app.Id, app.DataUpdateCallbackUrl));
+                await session.SaveChangesAsync();
                 return;
             }
 
             if (IsLocalHost(uri))
             {
                 _logger.LogWarning("Uri with url {DataCallbackUrl} is equal to localhost. Will ignore message.", app.DataUpdateCallbackUrl);
+                syncLog?.Steps.Add(new DataSyncStep(DataSyncStepType.AppNotification, DataSyncStepState.Failed,
+                    "Uri is equal to localhost. Will ignore message.", app.Id, app.DataUpdateCallbackUrl));
+                await session.SaveChangesAsync();
                 return;
             }
 
@@ -185,43 +204,53 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Got error calling endpoint. Will schedule retry.");
+                var logMessage = "Got error calling endpoint. Will schedule retry.";
+                _logger.LogError(e, logMessage);
+                syncLog?.Steps.Add(new DataSyncStep(DataSyncStepType.AppNotification, DataSyncStepState.Failed, logMessage, app.Id, app.DataUpdateCallbackUrl));
                 await _bus.DeferMessageLocalWithExponentialBackOff(message, _messageContext.Headers, MaxMessageRetries,
                     _rebusConfiguration.ErrorQueueName, logger: _logger);
+                await session.SaveChangesAsync();
                 return;
             }
 
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogError("Got non success status code ({HttpStatusCode}) calling endpoint. Will schedule retry.", response.StatusCode);
+                syncLog?.Steps.Add(new DataSyncStep(DataSyncStepType.AppNotification, DataSyncStepState.Failed, 
+                    $"Got non success status code ({response.StatusCode}) calling endpoint. Will schedule retry.", app.Id, app.DataUpdateCallbackUrl));
                 await _bus.DeferMessageLocalWithExponentialBackOff(message, _messageContext.Headers, MaxMessageRetries,
                     _rebusConfiguration.ErrorQueueName, logger: _logger);
+                await session.SaveChangesAsync();
                 return;
             }
-
+            
+            syncLog?.Steps.Add(new DataSyncStep(DataSyncStepType.AppNotification, DataSyncStepState.Succeeded));
+            
             _logger.LogInformation("App successfully notified about platform data update.");
         }
 
-        public static bool IsLocalHost(Uri uri)
+        private static bool IsLocalHost(Uri uri)
         {
-            var hostName = uri.Host;
-            var hostEntry = Dns.GetHostEntry(hostName);
+            var host = uri.Host;
 
-            var localhost = Dns.GetHostEntry("127.0.0.1");
-            if (string.Equals(hostName, localhost.HostName, StringComparison.InvariantCultureIgnoreCase) &&
-                hostEntry.AddressList.Any(IPAddress.IsLoopback))
+            // get host IP addresses
+            IPAddress[] hostIPs = Dns.GetHostAddresses(host);
+            // get local IP addresses
+            IPAddress[] localIPs = Dns.GetHostAddresses(Dns.GetHostName());
+
+            // test if any host IP equals to any local IP or to localhost
+            foreach (IPAddress hostIP in hostIPs)
             {
-                return true;
+                // is localhost
+                if (IPAddress.IsLoopback(hostIP)) return true;
+                // is local address
+                foreach (IPAddress localIP in localIPs)
+                {
+                    if (hostIP.Equals(localIP)) return true;
+                }
             }
 
-            localhost = Dns.GetHostEntry(Dns.GetHostName());
-            if (IPAddress.TryParse(hostName, out var ipAddress) && 
-                localhost.AddressList.Any(x => x.Equals(ipAddress)))
-            {
-                return true;
-            }
-
-            return localhost.AddressList.Any(x => hostEntry.AddressList.Any(x.Equals));
+            return false;
         }
 
         private static PlatformConnectionUpdateNotificationPayload CreatePayload(Guid externalPlatformId, Guid externalUserId,

@@ -8,13 +8,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Common.Messages
         private PlatformConnectionUpdateNotificationMessage() { }
 
         public PlatformConnectionUpdateNotificationMessage(string platformId, string userId, string appId,
-            PlatformConnectionState platformConnectionState,
+            PlatformConnectionState platformConnectionState, string syncLogId,
             NotificationReason reason = NotificationReason.DataUpdate)
         {
             PlatformId = platformId;
             UserId = userId;
             AppId = appId;
             PlatformConnectionState = platformConnectionState;
+            SyncLogId = syncLogId;
             Reason = reason;
         }
 
@@ -22,6 +23,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Common.Messages
         public string UserId { get; private set; }
         public string AppId { get; private set; }
         public PlatformConnectionState PlatformConnectionState { get; private set; }
+        public string SyncLogId { get; private set; }
         public NotificationReason Reason { get; private set; }
     }
 

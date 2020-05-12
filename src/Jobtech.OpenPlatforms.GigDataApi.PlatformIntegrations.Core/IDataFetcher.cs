@@ -8,6 +8,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core
         where TConnectionInfo: IPlatformConnectionInfo
     {
         Task<TConnectionInfo> StartDataFetch(string userId, string platformId, TConnectionInfo connectionInfo,
-            PlatformConnection platformConnection, CancellationToken cancellationToken = default);
+            PlatformConnection platformConnection, DataSyncLog syncLog, CancellationToken cancellationToken = default);
     }
 }

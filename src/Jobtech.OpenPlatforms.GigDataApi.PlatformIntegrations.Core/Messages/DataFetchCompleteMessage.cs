@@ -6,15 +6,17 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core.Messages
     {
         private DataFetchCompleteMessage() { }
 
-        public DataFetchCompleteMessage(string userId, string platformId, PlatformDataFetchResult result)
+        public DataFetchCompleteMessage(string userId, string platformId, PlatformDataFetchResult result, string syncLogId)
         {
             UserId = userId;
             PlatformId = platformId;
             Result = result;
+            SyncLogId = syncLogId;
         }
 
         public PlatformDataFetchResult Result { get; private set; }
         public string UserId { get; private set; }
         public string PlatformId { get; private set; }
+        public string SyncLogId { get; private set; }
     }
 }

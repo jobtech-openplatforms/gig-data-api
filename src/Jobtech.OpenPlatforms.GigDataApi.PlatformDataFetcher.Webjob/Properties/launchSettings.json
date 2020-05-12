@@ -1,4 +1,10 @@
 {
   "profiles": {
+    "PlatformDataFetcher.Webjob": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "development"
+      }
+    }
   }
 }
