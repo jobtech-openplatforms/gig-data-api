@@ -125,6 +125,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             platformConnection.ConnectionInfo = connectionInfo;
             await session.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("Data fetch successfully initialized.");
         }
 
         private async Task LogErrorAndForwardMessageToErrorQueue(string logMessage, Exception e = null, params object[] loggerArgs)
