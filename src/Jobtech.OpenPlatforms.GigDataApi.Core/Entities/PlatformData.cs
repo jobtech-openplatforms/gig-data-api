@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Jobtech.OpenPlatforms.GigDataApi.Common;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities.Base;
 
@@ -31,7 +32,17 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
         public IEnumerable<ReviewData> Reviews { get; set; }
         public IEnumerable<Achievement> Achievements { get; set; }
         public DateTimeOffset LastUpdated { get; set; }
-        public IList<RawData> DataLog { get; private set; }
+        public IReadOnlyList<RawData> DataLog { get; private set; }
+
+        public void AddRawDataToDataLog(RawData rawData)
+        {
+            DataLog = new List<RawData>(DataLog) { rawData }.AsReadOnly();
+            //keep only the 5 most recent
+            if (DataLog.Count > 5)
+            {
+                DataLog = DataLog.OrderByDescending(dl => dl.Created).Take(5).ToList().AsReadOnly();
+            }
+        }
     }
 
     public class ReviewData

@@ -71,7 +71,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
             }
 
             var rawPlatformData = new RawData(rawData);
-            platformData.DataLog.Add(rawPlatformData);
+            platformData.AddRawDataToDataLog(rawPlatformData);
 
             platformData.LastUpdated = DateTimeOffset.UtcNow;
 
