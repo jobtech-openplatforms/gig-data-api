@@ -8,9 +8,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Jobtech.OpenPlatforms.GigDataApi.Engine.IoC
 {
-    public static class CVDataEngineServiceCollectionExtension
+    public static class GigDataApiEngineServiceCollectionExtension
     {
-        public static IServiceCollection AddCVDataEngine(this IServiceCollection collection)
+        public static IServiceCollection AddGigDataApiEngine(this IServiceCollection collection)
         {
             collection.AddTransient<IPlatformManager, PlatformManager>();
             collection.AddTransient<IPlatformConnectionManager, PlatformConnectionManager>();
@@ -25,7 +25,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.IoC
             return collection;
         }
 
-        public static IServiceCollection AddCVDataEngineDataFetching(this IServiceCollection collection,
+        public static IServiceCollection AddGigDataApiEngineDataFetching(this IServiceCollection collection,
             IConfiguration configuration)
         {
             collection.AddFreelancerDataFetch(configuration);
@@ -34,12 +34,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.IoC
             return collection;
         }
 
-        public static IServiceCollection AddCVDataEngineAuthentication(this IServiceCollection collection,
+        public static IServiceCollection AddGigDataApiEngineAuthentication(this IServiceCollection collection,
             IConfiguration configuration)
         {
             var auth0Section = configuration.GetSection("Auth0");
             var managementApiAudience = auth0Section.GetValue<string>("ManagementApiAudience");
-            var cvDataAudience = auth0Section.GetValue<string>("CVDataAudience");
+            var audience = auth0Section.GetValue<string>("CVDataAudience");
             var clientId = auth0Section.GetValue<string>("ClientId");
             var clientSecret = auth0Section.GetValue<string>("ClientSecret");
             var managementClientId = auth0Section.GetValue<string>("ManagementClientId");
@@ -52,7 +52,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.IoC
             {
                 options.TenantDomain = tenantDomain;
                 options.ManagementApiAudience = managementApiAudience;
-                options.CVDataAudience = cvDataAudience;
+                options.Audience = audience;
                 options.ClientId = clientId;
                 options.ClientSecret = clientSecret;
                 options.ManagementClientId = managementClientId;
@@ -74,7 +74,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.IoC
             return collection;
         }
 
-        public static IServiceCollection AddCVDataEnginePlatformAuthentication(this IServiceCollection collection,
+        public static IServiceCollection AddGigDataApiEnginePlatformAuthentication(this IServiceCollection collection,
             IConfiguration configuration)
         {
             collection.AddFreelancerAuthentication(configuration);
@@ -90,7 +90,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.IoC
             public string ManagementClientId { get; set; }
             public string ManagementClientSecret { get; set; }
             public string ManagementApiAudience { get; set; }
-            public string CVDataAudience { get; set; }
+            public string Audience { get; set; }
             public string MobileBankIdConnectionName { get; set; }
             public string DatabaseConnectionName { get; set; }
         }

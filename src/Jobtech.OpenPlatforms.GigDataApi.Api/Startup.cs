@@ -230,9 +230,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
 
             services.AddCors();
 
-            services.AddCVDataEngine();
-            services.AddCVDataEngineAuthentication(Configuration);
-            services.AddCVDataEnginePlatformAuthentication(Configuration);
+            services.AddGigDataApiEngine();
+            services.AddGigDataApiEngineAuthentication(Configuration);
+            services.AddGigDataApiEnginePlatformAuthentication(Configuration);
 
             var ravenDbSection = Configuration.GetSection("RavenDb");
             var urls = new List<string>();

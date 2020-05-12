@@ -26,19 +26,19 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
         private readonly IUserManager _userManager;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly string _auth0TenantUrl;
-        private readonly string _auth0CvDataAudience;
+        private readonly string _auth0Audience;
         private readonly string _auth0MobileBankIdConnectionName;
         private readonly string _auth0DatabaseConnectionName;
 
         public UserController(IDocumentStore documentStore, IUserManager userManager,
             IHttpContextAccessor httpContextAccessor,
-            IOptions<CVDataEngineServiceCollectionExtension.Auth0Configuration> auth0Options)
+            IOptions<GigDataApiEngineServiceCollectionExtension.Auth0Configuration> auth0Options)
         {
             _documentStore = documentStore;
             _userManager = userManager;
             _httpContextAccessor = httpContextAccessor;
             _auth0TenantUrl = auth0Options.Value.TenantDomain;
-            _auth0CvDataAudience = auth0Options.Value.CVDataAudience;
+            _auth0Audience = auth0Options.Value.Audience;
             _auth0MobileBankIdConnectionName = auth0Options.Value.MobileBankIdConnectionName;
             _auth0DatabaseConnectionName = auth0Options.Value.DatabaseConnectionName;
 
@@ -77,7 +77,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             }
 
             var authorizeEndpointUri = $"{_auth0TenantUrl}authorize";
-            var audience = _auth0CvDataAudience;
+            var audience = _auth0Audience;
             var responseType = "id_token token";
             //var prompt = "consent";
             var scope = "openid profile name";

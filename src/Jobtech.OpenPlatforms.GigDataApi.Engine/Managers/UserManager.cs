@@ -140,7 +140,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         private readonly ILogger<Auth0ManagementApiHttpClient> _logger;
 
         public Auth0ManagementApiHttpClient(HttpClient client,
-            IOptions<CVDataEngineServiceCollectionExtension.Auth0Configuration> options, ILogger<Auth0ManagementApiHttpClient> logger)
+            IOptions<GigDataApiEngineServiceCollectionExtension.Auth0Configuration> options, ILogger<Auth0ManagementApiHttpClient> logger)
         {
             Client = client;
             _clientId = options.Value.ManagementClientId;

@@ -81,9 +81,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                 var serviceProvider = services.BuildServiceProvider();
                 var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
-                services.AddCVDataEngine();
-                services.AddCVDataEngineDataFetching(hostContext.Configuration);
-                services.AddCVDataEnginePlatformAuthentication(hostContext.Configuration);
+                services.AddGigDataApiEngine();
+                services.AddGigDataApiEngineDataFetching(hostContext.Configuration);
+                services.AddGigDataApiEnginePlatformAuthentication(hostContext.Configuration);
 
                 services.AutoRegisterHandlersFromAssemblyOf<DataFetchCompleteHandler>();
                 services.AutoRegisterHandlersFromAssemblyOf<DataFetchCompleteMessageHandler>(); //Gigplatform data update handler.
