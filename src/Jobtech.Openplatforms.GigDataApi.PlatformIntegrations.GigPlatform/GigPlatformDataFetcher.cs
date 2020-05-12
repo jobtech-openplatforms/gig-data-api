@@ -41,7 +41,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
             CancellationToken cancellationToken = default)
         {
             using var _ = Logger.BeginPropertyScope((LoggerPropertyNames.UserId, userId),
-                (LoggerPropertyNames.PlatformId, platformId), (LoggerPropertyNames.PlatformName, platformConnection.PlatformName));
+                (LoggerPropertyNames.PlatformId, platformId), (LoggerPropertyNames.PlatformName, platformConnection.PlatformName),
+                (LoggerPropertyNames.DataSyncLogId, syncLog.ExternalId));
 
             Logger.LogInformation("Will start data fetch from a Gig platform integrated platform for user.");
 

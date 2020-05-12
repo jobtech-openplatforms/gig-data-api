@@ -55,7 +55,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
         public async Task Handle(PlatformConnectionUpdateNotificationMessage message)
         {
-            using var loggerScope = _logger.BeginNamedScopeWithMessage(nameof(DataFetchCompleteHandler),
+            using var _ = _logger.BeginNamedScopeWithMessage(nameof(DataFetchCompleteHandler),
                 _messageContext.Message.GetMessageId(),
                 (LoggerPropertyNames.ApplicationId, message.AppId),
                 (LoggerPropertyNames.UserId, message.UserId));
@@ -66,6 +66,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
             {
                 syncLog = await session.LoadAsync<DataSyncLog>(message.SyncLogId);
             }
+
+            using var __ = _logger.BeginPropertyScope((LoggerPropertyNames.DataSyncLogId, syncLog?.ExternalId));
 
             var cancellationToken = _messageContext.GetCancellationToken();
 

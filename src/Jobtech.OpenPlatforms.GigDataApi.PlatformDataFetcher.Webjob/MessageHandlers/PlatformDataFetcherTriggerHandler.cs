@@ -41,7 +41,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
         public async Task Handle(PlatformDataFetcherTriggerMessage message)
         {
-            using var loggerScope = _logger.BeginNamedScopeWithMessage(nameof(DataFetchCompleteHandler),
+            using var _ = _logger.BeginNamedScopeWithMessage(nameof(DataFetchCompleteHandler),
                 _messageContext.Message.GetMessageId());
 
             _logger.LogInformation("Will check if any platform connection is up for data fetching.");
@@ -61,13 +61,13 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
             foreach (var kvp in platformConnectionsToFetchDataForPerUser)
             {
                 var userId = kvp.Key;
-                using var innerLoggingScope1 = _logger.BeginPropertyScope((LoggerPropertyNames.UserId, userId));
+                using var __ = _logger.BeginPropertyScope((LoggerPropertyNames.UserId, userId));
 
                 _logger.LogInformation("Will trigger data fetches for {NoOfPlatformConnections} distinct platforms for user.", kvp.Value.Count());
 
                 foreach (var platformConnection in kvp.Value)
                 {
-                    using var innerLoggingScope2 = _logger.BeginPropertyScope(
+                    using var ___ = _logger.BeginPropertyScope(
                         (LoggerPropertyNames.PlatformId, platformConnection.PlatformId),
                         (LoggerPropertyNames.PlatformName, platformConnection.PlatformName));
 

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Common;
+using Jobtech.OpenPlatforms.GigDataApi.Common.Extensions;
 using Jobtech.OpenPlatforms.GigDataApi.Core.Entities;
 using Jobtech.OpenPlatforms.GigDataApi.Core.OAuth;
 using Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Core;
@@ -33,6 +34,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.Freelancer
             OAuthPlatformConnectionInfo connectionInfo, PlatformConnection platformConnection, DataSyncLog syncLog,
             CancellationToken cancellationToken = default)
         {
+            using var _ = Logger.BeginPropertyScope((LoggerPropertyNames.DataSyncLogId, syncLog.ExternalId));
+
             Logger.LogTrace($"Will start data fetch from Freelancer for user with id {userId}");
             if (connectionInfo.Token.HasExpired())
             {

@@ -31,13 +31,20 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
         public async Task Handle(PlatformConnectionRemovedMessage message)
         {
-            _logger.BeginPropertyScope((LoggerPropertyNames.PlatformId, message.PlatformId), 
+            using var _ = _logger.BeginPropertyScope((LoggerPropertyNames.PlatformId, message.PlatformId), 
                 (LoggerPropertyNames.UserId, message.UserId), 
                 ("DeleteReason", message.DeleteReason));
             _logger.LogInformation("Will remove platform connection");
 
             using var session = _documentStore.OpenAsyncSession();
 
+            DataSyncLog syncLog = null;
+            if (!string.IsNullOrEmpty(message.SyncLogId))
+            {
+                syncLog = await session.LoadAsync<DataSyncLog>(message.SyncLogId);
+            }
+
+            using var __ = _logger.BeginPropertyScope((LoggerPropertyNames.DataSyncLogId, syncLog?.ExternalId));
 
             //remove connection
             var user = await session.LoadAsync<User>(message.UserId);
@@ -59,7 +66,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             if (indexToRemove == -1 || platformConnectionToRemove == null)
             {
-                _logger.LogWarning($"Platform connection with platform id {message.PlatformId} was not found for user with id {message.UserId}");
+                _logger.LogWarning("Platform connection with platform id {PlatformId} was not found for user with id {UserId}", 
+                    message.PlatformId, message.UserId);
+                syncLog?.Steps.Add(new DataSyncStep(DataSyncStepType.RemovePlatformConnection, DataSyncStepState.Failed,
+                    $"Platform connection with platform id {message.PlatformId} was not found for user with id {message.UserId}"));
+                await session.SaveChangesAsync();
                 return;
             }
 
@@ -74,6 +85,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
                 _logger.LogInformation("No delete reason was given. Will do hard delete");
                 user.PlatformConnections.RemoveAt(indexToRemove);
             }
+
+            syncLog?.Steps.Add(new DataSyncStep(DataSyncStepType.RemovePlatformConnection, DataSyncStepState.Succeeded));
 
             await session.SaveChangesAsync();
 

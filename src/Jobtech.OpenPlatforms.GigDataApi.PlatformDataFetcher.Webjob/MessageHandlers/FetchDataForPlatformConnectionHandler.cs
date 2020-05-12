@@ -46,7 +46,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
         public async Task Handle(FetchDataForPlatformConnectionMessage message)
         {
-            using var loggerScope = _logger.BeginNamedScopeWithMessage(nameof(DataFetchCompleteHandler),
+            using var _ = _logger.BeginNamedScopeWithMessage(nameof(DataFetchCompleteHandler),
                 _messageContext.Message.GetMessageId(),
                 (LoggerPropertyNames.PlatformId, message.PlatformId),
                 (LoggerPropertyNames.UserId, message.UserId),
@@ -58,6 +58,11 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             using var session = _documentStore.OpenAsyncSession();
             var user = await session.LoadAsync<User>(message.UserId, cancellationToken);
+
+            var syncLog = new DataSyncLog(user.Id, message.PlatformId);
+
+            using var __ = _logger.BeginPropertyScope((LoggerPropertyNames.DataSyncLogId, syncLog.ExternalId));
+
             var platformConnection = user.PlatformConnections.SingleOrDefault(pc => pc.PlatformId == message.PlatformId);
             if (platformConnection == null)
             {
@@ -67,7 +72,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             var connectionInfo = platformConnection.ConnectionInfo;
 
-            var syncLog = new DataSyncLog(user.Id, message.PlatformId);
+            
             await session.StoreAsync(syncLog);
 
             try
@@ -130,7 +135,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
         public async Task Handle(IFailed<FetchDataForPlatformConnectionMessage> message)
         {
-            using var loggerScope = _logger.BeginNamedScopeWithMessage(nameof(DataFetchCompleteHandler),
+            using var _ = _logger.BeginNamedScopeWithMessage(nameof(DataFetchCompleteHandler),
                 _messageContext.Message.GetMessageId(),
                 (LoggerPropertyNames.PlatformId, message.Message.PlatformId),
                 (LoggerPropertyNames.UserId, message.Message.UserId),

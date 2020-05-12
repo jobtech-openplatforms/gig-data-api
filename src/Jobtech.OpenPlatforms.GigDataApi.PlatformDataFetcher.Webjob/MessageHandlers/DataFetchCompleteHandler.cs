@@ -41,7 +41,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
         public async Task Handle(DataFetchCompleteMessage message)
         {
-            using var loggerScope = _logger.BeginNamedScopeWithMessage(nameof(DataFetchCompleteHandler),
+            using var _ = _logger.BeginNamedScopeWithMessage(nameof(DataFetchCompleteHandler),
                 _messageContext.Message.GetMessageId(), 
                 (LoggerPropertyNames.PlatformId, message.PlatformId),
                 (LoggerPropertyNames.UserId, message.UserId));
@@ -53,7 +53,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
             using var session = _documentStore.OpenAsyncSession();
 
             var syncLog = await session.LoadAsync<DataSyncLog>(message.SyncLogId);
+
             syncLog.Steps.Add(new DataSyncStep(DataSyncStepType.PlatformDataFetch, DataSyncStepState.Succeeded));
+            using var __ = _logger.BeginPropertyScope((LoggerPropertyNames.DataSyncLogId, syncLog.ExternalId));
 
             var (platformDataId, platformConnection) = await HandleFetchDataResult(message.UserId, message.PlatformId,
                 message.Result, session, cancellationToken);
@@ -64,7 +66,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
                 return;
             }
 
-            using var innerLoggingScope =
+            using var ___ =
                 _logger.BeginPropertyScope((LoggerPropertyNames.PlatformDataId, platformDataId));
 
             _logger.LogInformation("Result processed. Will notify {NoOfNotificationInfos} applications.",
@@ -107,7 +109,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
         public async Task Handle(IFailed<DataFetchCompleteMessage> message)
         {
-            using var loggerScope = _logger.BeginNamedScopeWithMessage(nameof(DataFetchCompleteHandler),
+            using var _ = _logger.BeginNamedScopeWithMessage(nameof(DataFetchCompleteHandler),
                 _messageContext.Message.GetMessageId(), 
                 (LoggerPropertyNames.PlatformId, message.Message.PlatformId),
                 (LoggerPropertyNames.UserId, message.Message.UserId));

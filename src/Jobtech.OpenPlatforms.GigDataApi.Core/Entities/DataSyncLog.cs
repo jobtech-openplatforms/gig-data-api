@@ -7,6 +7,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
     {
         private DataSyncLog()
         {
+            ExternalId = Guid.NewGuid();
             Steps = new List<DataSyncStep>();
         }
 
@@ -17,6 +18,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
         }
 
         public string Id { get; private set; }
+        public Guid ExternalId { get; private set; }
         public string UserId { get; private set; }
         public string PlatformId { get; private set; }
         public IList<DataSyncStep> Steps { get; private set; }
@@ -51,7 +53,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Core.Entities
     public enum DataSyncStepType
     {
         PlatformDataFetch,
-        AppNotification
+        AppNotification,
+        RemovePlatformConnection
     }
 
     public enum DataSyncStepState

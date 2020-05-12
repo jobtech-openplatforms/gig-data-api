@@ -36,7 +36,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
 
         public async Task Handle(PlatformUserUpdateDataMessage message)
         {
-            _logger.BeginPropertyScope((LoggerPropertyNames.GigPlatformApiRequestId, message.RequestId), ("ResultType", message.ResultType));
+            using var _ = _logger.BeginPropertyScope((LoggerPropertyNames.GigPlatformApiRequestId, message.RequestId), ("ResultType", message.ResultType));
 
             _logger.LogInformation($"Got data fetch result for request id {message.RequestId}");
 
