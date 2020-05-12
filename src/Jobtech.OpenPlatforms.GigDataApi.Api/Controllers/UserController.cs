@@ -102,7 +102,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             var uniqueUserId = _httpContextAccessor.HttpContext.User.Identity.Name;
 
             using var session = _documentStore.OpenAsyncSession();
-            var user = await _userManager.GetOrCreateUserIfNotExists(uniqueUserId, session, cancellationToken);
+            var user = await _userManager.GetUserByUniqueIdentifier(uniqueUserId, session, cancellationToken);
 
             return new UserViewModel(user);
         }

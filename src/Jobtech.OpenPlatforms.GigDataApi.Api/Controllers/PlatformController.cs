@@ -76,8 +76,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             var uniqueUserIdentifier = _httpContextAccessor.HttpContext.User.Identity.Name;
 
             using var session = _documentStore.OpenAsyncSession();
-            var user = await _userManager.GetOrCreateUserIfNotExists(uniqueUserIdentifier, session, cancellationToken);
-            await session.SaveChangesAsync(cancellationToken);
+            var user = await _userManager.GetUserByUniqueIdentifier(uniqueUserIdentifier, session, cancellationToken);
 
             var platform = await _platformManager.GetPlatformByExternalId(platformId, session, cancellationToken);
 
@@ -108,8 +107,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             var uniqueUserIdentifier = _httpContextAccessor.HttpContext.User.Identity.Name;
 
             using var session = _documentStore.OpenAsyncSession();
-            var user = await _userManager.GetOrCreateUserIfNotExists(uniqueUserIdentifier, session, cancellationToken);
-            await session.SaveChangesAsync(cancellationToken);
+            var user = await _userManager.GetUserByUniqueIdentifier(uniqueUserIdentifier, session, cancellationToken);
 
             var platforms = await _platformManager.GetAllPlatforms(session, cancellationToken);
 
@@ -142,8 +140,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             var uniqueUserIdentifier = _httpContextAccessor.HttpContext.User.Identity.Name;
 
             using var session = _documentStore.OpenAsyncSession();
-            var user = await _userManager.GetOrCreateUserIfNotExists(uniqueUserIdentifier, session, cancellationToken);
-            await session.SaveChangesAsync(cancellationToken);
+            var user = await _userManager.GetUserByUniqueIdentifier(uniqueUserIdentifier, session, cancellationToken);
 
             var platformIds = user.PlatformConnections.Select(pc => pc.PlatformId).ToList();
             var platforms =
@@ -169,8 +166,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             var uniqueUserIdentifier = _httpContextAccessor.HttpContext.User.Identity.Name;
 
             using var session = _documentStore.OpenAsyncSession();
-            var user = await _userManager.GetOrCreateUserIfNotExists(uniqueUserIdentifier, session, cancellationToken);
-            await session.SaveChangesAsync(cancellationToken);
+            var user = await _userManager.GetUserByUniqueIdentifier(uniqueUserIdentifier, session, cancellationToken);
 
             // update state
             foreach (var platformConnectionStateUpdate in model.PlatformConnectionStateUpdates)
@@ -287,9 +283,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
             var uniqueUserIdentifier = _httpContextAccessor.HttpContext.User.Identity.Name;
 
             using var session = _documentStore.OpenAsyncSession();
-            var user = await _userManager.GetOrCreateUserIfNotExists(uniqueUserIdentifier, session, cancellationToken);
+            var user = await _userManager.GetUserByUniqueIdentifier(uniqueUserIdentifier, session, cancellationToken);
             var platform = await _platformManager.GetPlatformByExternalId(platformId, session, cancellationToken);
-            
 
             var platformConnection = user.PlatformConnections.SingleOrDefault(pc => pc.PlatformId == platform.Id);
 
