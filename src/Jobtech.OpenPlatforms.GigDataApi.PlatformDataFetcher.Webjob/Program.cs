@@ -105,6 +105,12 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                     ConnectionString = rabbitMqConnectionString
                 };
 
+                var jsonSerializerSettings = new JsonSerializerSettings
+                {
+                    ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+                    ContractResolver = new PrivateResolver()
+                };
+
                 services.AddRebus(c =>
                     c
                         .Transport(t =>
@@ -122,6 +128,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                         .Routing(r => r.TypeBased()
                             .Map<FetchDataForPlatformConnectionMessage>(inputQueueName)
                             .Map<PlatformConnectionUpdateNotificationMessage>(inputQueueName))
+                        .Serialization(s => s.UseNewtonsoftJson(jsonSerializerSettings))
 
                 );
 
