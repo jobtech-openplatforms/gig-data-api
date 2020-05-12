@@ -226,7 +226,8 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
                 return;
             }
             
-            syncLog?.Steps.Add(new DataSyncStep(DataSyncStepType.AppNotification, DataSyncStepState.Succeeded));
+            syncLog?.Steps.Add(new DataSyncStep(DataSyncStepType.AppNotification, DataSyncStepState.Succeeded, appId: app.Id, appWebHookUrl: app.DataUpdateCallbackUrl));
+            await session.SaveChangesAsync();
             
             _logger.LogInformation("App successfully notified about platform data update.");
         }
