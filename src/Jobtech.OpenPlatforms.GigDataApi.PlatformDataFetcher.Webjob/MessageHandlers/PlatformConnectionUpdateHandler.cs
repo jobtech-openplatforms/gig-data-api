@@ -217,17 +217,52 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob.MessageHan
 
             if (!response.IsSuccessStatusCode)
             {
+                if (response.StatusCode == HttpStatusCode.Gone)
+                {
+                    _logger.LogInformation("App responded with {httpStatusCode}. Will remove notification info for app.", response.StatusCode);
+
+                    //this means that the app is telling us that they don't want updates for the given platform for the user again.
+                    //remove the app notification from the platformconnection.
+                    var platformConnection = user.PlatformConnections.SingleOrDefault(pc => pc.PlatformId == message.PlatformId);
+                    if (platformConnection != null)
+                    {
+                        int? notificationInfoIdx = null;
+                        var counter = 0;
+                        foreach (var notificationInfo in platformConnection.ConnectionInfo.NotificationInfos) {
+                            if (notificationInfo.AppId == message.AppId)
+                            {
+                                notificationInfoIdx = counter;
+                                break;
+                            }
+                            counter++;
+                        }
+
+                        if (notificationInfoIdx.HasValue)
+                        {
+                            platformConnection.ConnectionInfo.NotificationInfos.RemoveAt(notificationInfoIdx.Value);
+                        }
+                    }
+
+                    syncLog?.Steps.Add(new DataSyncStep(DataSyncStepType.AppNotification, DataSyncStepState.Succeeded, 
+                        logMessage: $"App responded with {response.StatusCode}, indicating that the notification should be removed. App will not be notified again.", 
+                        appId: app.Id, 
+                        appWebHookUrl: app.DataUpdateCallbackUrl));
+
+                    await session.SaveChangesAsync(cancellationToken);
+                    return;
+                }
+
                 _logger.LogError("Got non success status code ({HttpStatusCode}) calling endpoint. Will schedule retry.", response.StatusCode);
                 syncLog?.Steps.Add(new DataSyncStep(DataSyncStepType.AppNotification, DataSyncStepState.Failed, 
                     $"Got non success status code ({response.StatusCode}) calling endpoint. Will schedule retry.", app.Id, app.DataUpdateCallbackUrl));
                 await _bus.DeferMessageLocalWithExponentialBackOff(message, _messageContext.Headers, MaxMessageRetries,
                     _rebusConfiguration.ErrorQueueName, logger: _logger);
-                await session.SaveChangesAsync();
+                await session.SaveChangesAsync(cancellationToken);
                 return;
             }
             
             syncLog?.Steps.Add(new DataSyncStep(DataSyncStepType.AppNotification, DataSyncStepState.Succeeded, appId: app.Id, appWebHookUrl: app.DataUpdateCallbackUrl));
-            await session.SaveChangesAsync();
+            await session.SaveChangesAsync(cancellationToken);
             
             _logger.LogInformation("App successfully notified about platform data update.");
         }
