@@ -72,11 +72,14 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
                 var periodEnd = message.PlatformData.Interactions.Max(i => i.Period?.End);
 
                 var ratings = new List<KeyValuePair<string, GigDataCommon.Library.Models.Rating>>();
-                foreach (var interaction in message.PlatformData.Interactions)
+                if (message.PlatformData.Interactions != null)
                 {
-                    foreach (var rating in interaction.Outcome.Ratings)
+                    foreach (var interaction in message.PlatformData.Interactions)
                     {
-                        ratings.Add(new KeyValuePair<string, GigDataCommon.Library.Models.Rating>(interaction.Id, rating));
+                        foreach (var rating in interaction.Outcome.Ratings)
+                        {
+                            ratings.Add(new KeyValuePair<string, GigDataCommon.Library.Models.Rating>(interaction.Id, rating));
+                        }
                     }
                 }
 
@@ -109,69 +112,75 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformIntegrations.GigPlatform
                 }
 
                 var mappedReviews = new List<ReviewDataFetchResult>();
-                foreach (var interaction in message.PlatformData.Interactions)
+                if (message.PlatformData.Interactions != null)
                 {
-                    var interactionId = interaction.Id;
-                    if (string.IsNullOrEmpty(interactionId))
+                    foreach (var interaction in message.PlatformData.Interactions)
                     {
-                        interactionId = Guid.NewGuid().ToString();
+                        var interactionId = interaction.Id;
+                        if (string.IsNullOrEmpty(interactionId))
+                        {
+                            interactionId = Guid.NewGuid().ToString();
+                        }
+
+
+                        if (interaction.Outcome.Review == null)
+                        {
+                            continue;
+                        }
+
+                        Guid? ratingIdentifier = null;
+                        if (interactionIdsToReviewIdentifiers.ContainsKey(interactionId) && interactionIdsToReviewIdentifiers[interactionId].Count > 0)
+                        {
+                            ratingIdentifier = interactionIdsToReviewIdentifiers[interactionId][0];
+                        }
+
+                        var clientName = interaction.Client?.Name;
+                        var clientAvatarUri = interaction.Client?.PhotoUri;
+
+                        var mappedReview = new ReviewDataFetchResult($"{platformId}_{interactionId}",
+                            interaction.Period.End, ratingIdentifier, interaction.Outcome.Review.Title,
+                            interaction.Outcome.Review.Text, clientName, clientAvatarUri);
+
+                        mappedReviews.Add(mappedReview);
                     }
-
-
-                    if (interaction.Outcome.Review == null)
-                    {
-                        continue;
-                    }
-
-                    Guid? ratingIdentifier = null;
-                    if (interactionIdsToReviewIdentifiers.ContainsKey(interactionId) && interactionIdsToReviewIdentifiers[interactionId].Count > 0)
-                    {
-                        ratingIdentifier = interactionIdsToReviewIdentifiers[interactionId][0];
-                    }
-
-                    var clientName = interaction.Client?.Name;
-                    var clientAvatarUri = interaction.Client?.PhotoUri;
-
-                    var mappedReview = new ReviewDataFetchResult($"{platformId}_{interactionId}",
-                        interaction.Period.End, ratingIdentifier, interaction.Outcome.Review.Title,
-                        interaction.Outcome.Review.Text, clientName, clientAvatarUri);
-
-                    mappedReviews.Add(mappedReview);
                 }
 
                 var mappedAchievements = new List<AchievementFetchResult>();
-                foreach (var achievement in message.PlatformData.Achievements)
+                if (message.PlatformData.Achievements != null)
                 {
-                    var achievementId = achievement.Id;
-                    if (string.IsNullOrEmpty(achievementId))
+                    foreach (var achievement in message.PlatformData.Achievements)
                     {
-                        achievementId = Guid.NewGuid().ToString();
+                        var achievementId = achievement.Id;
+                        if (string.IsNullOrEmpty(achievementId))
+                        {
+                            achievementId = Guid.NewGuid().ToString();
+                        }
+
+                        AchievementScoreFetchResult achievementScore = null;
+                        if (achievement.Score != null)
+                        {
+                            achievementScore = new AchievementScoreFetchResult(achievement.Score.Value.ToString(CultureInfo.InvariantCulture), achievement.Score.Label);
+                        }
+
+                        Common.PlatformAchievementType achievementType = PlatformAchievementType.Badge;
+                        switch (achievement.Type)
+                        {
+                            case GigDataCommon.Library.Models.PlatformAchievementType.Badge:
+                                achievementType = PlatformAchievementType.Badge;
+                                break;
+                            case GigDataCommon.Library.Models.PlatformAchievementType.QualificationAssessment:
+                                achievementType = PlatformAchievementType.QualificationAssessment;
+                                break;
+                            default:
+                                throw new ArgumentException($"Unknown platform achievement type {achievement.Type}");
+                        }
+
+                        var mappedAchievement = new AchievementFetchResult(achievementId, achievement.Name,
+                            achievement.Type.ToString(), achievementType, achievement.Description,
+                            achievement.BadgeIconUri, achievementScore);
+
+                        mappedAchievements.Add(mappedAchievement);
                     }
-
-                    AchievementScoreFetchResult achievementScore = null;
-                    if (achievement.Score != null)
-                    {
-                        achievementScore = new AchievementScoreFetchResult(achievement.Score.Value.ToString(CultureInfo.InvariantCulture), achievement.Score.Label);
-                    }
-
-                    Common.PlatformAchievementType achievementType = PlatformAchievementType.Badge;
-                    switch (achievement.Type)
-                    {
-                        case GigDataCommon.Library.Models.PlatformAchievementType.Badge:
-                            achievementType = PlatformAchievementType.Badge;
-                            break;
-                        case GigDataCommon.Library.Models.PlatformAchievementType.QualificationAssessment:
-                            achievementType = PlatformAchievementType.QualificationAssessment;
-                            break;
-                        default:
-                            throw new ArgumentException($"Unknown platform achievement type {achievement.Type}");
-                    }
-
-                    var mappedAchievement = new AchievementFetchResult(achievementId, achievement.Name,
-                        achievement.Type.ToString(), achievementType, achievement.Description,
-                        achievement.BadgeIconUri, achievementScore);
-
-                    mappedAchievements.Add(mappedAchievement);
                 }
 
 
