@@ -77,49 +77,6 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.Managers
         }
     }
 
-    //public class Auth0Client
-    //{
-    //    private readonly ILogger<Auth0Client> _logger;
-
-    //    public HttpClient Client { get; }
-
-    //    public Auth0Client(HttpClient client, ILogger<Auth0Client> logger)
-    //    {
-    //        Client = client;
-    //        _logger = logger;
-    //    }
-
-    //    public async Task<Auth0UserInfoViewModel> GetUserInfo(string accessToken)
-    //    {
-    //        Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-    //        var requestUri = "userinfo";
-    //        HttpResponseMessage response;
-    //        try
-    //        {
-    //            response = await Client.GetAsync(requestUri);
-    //        }
-    //        catch (Exception e)
-    //        {
-    //            _logger.LogError(e, "Could not communicate with Auth0 on {RequestUri}", requestUri);
-    //            throw new ExternalResourceCommunicationErrorException("Could not communicate with Auth0.", e);
-    //        }
-
-
-    //        if (!response.IsSuccessStatusCode)
-    //        {
-    //            _logger.LogError(
-    //                "Got non success status code in response. Status code: {StatusCode}. Reason phrase: {ReasonPhrase}",
-    //                response.StatusCode, response.ReasonPhrase);
-    //            throw new ExternalResourceCommunicationErrorException(response.ReasonPhrase);
-    //        }
-
-    //        var responseStr = await response.Content.ReadAsStringAsync();
-    //        return JsonConvert.DeserializeObject<Auth0UserInfoViewModel>(responseStr);
-    //    }
-
-    //}
-
     public class Auth0UserInfoViewModel
     {
         public string Name { get; set; }

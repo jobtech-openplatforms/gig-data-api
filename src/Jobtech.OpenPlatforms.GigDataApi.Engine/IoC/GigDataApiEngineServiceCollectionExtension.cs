@@ -39,26 +39,16 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.IoC
         {
             var auth0Section = configuration.GetSection("Auth0");
             var managementApiAudience = auth0Section.GetValue<string>("ManagementApiAudience");
-            var audience = auth0Section.GetValue<string>("CVDataAudience");
-            var clientId = auth0Section.GetValue<string>("ClientId");
-            var clientSecret = auth0Section.GetValue<string>("ClientSecret");
             var managementClientId = auth0Section.GetValue<string>("ManagementClientId");
             var managementClientSecret = auth0Section.GetValue<string>("ManagementClientSecret");
             var tenantDomain = auth0Section.GetValue<string>("TenantDomain");
-            var mobileBankIdConnectionName = auth0Section.GetValue<string>("MobileBankIdConnectionName");
-            var databaseConnectionName = auth0Section.GetValue<string>("DatabaseConnectionName");
 
             collection.Configure<Auth0Configuration>(options =>
             {
                 options.TenantDomain = tenantDomain;
                 options.ManagementApiAudience = managementApiAudience;
-                options.Audience = audience;
-                options.ClientId = clientId;
-                options.ClientSecret = clientSecret;
                 options.ManagementClientId = managementClientId;
                 options.ManagementClientSecret = managementClientSecret;
-                options.MobileBankIdConnectionName = mobileBankIdConnectionName;
-                options.DatabaseConnectionName = databaseConnectionName;
             });
 
             collection.AddHttpClient<Auth0ManagementApiHttpClient>(
@@ -85,14 +75,9 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Engine.IoC
         public class Auth0Configuration
         {
             public string TenantDomain { get; set; }
-            public string ClientSecret { get; set; }
-            public string ClientId { get; set; }
             public string ManagementClientId { get; set; }
             public string ManagementClientSecret { get; set; }
             public string ManagementApiAudience { get; set; }
-            public string Audience { get; set; }
-            public string MobileBankIdConnectionName { get; set; }
-            public string DatabaseConnectionName { get; set; }
         }
     }
 }

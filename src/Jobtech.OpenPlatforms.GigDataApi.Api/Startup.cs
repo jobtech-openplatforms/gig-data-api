@@ -83,7 +83,7 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api
             }).AddJwtBearer(options =>
             {
                 options.Authority = auth0Section.GetValue<string>("TenantDomain");
-                options.Audience = "cvdata.se";
+                options.Audience = "https://api.gigdata.openplatforms.org";
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     NameClaimType = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"
