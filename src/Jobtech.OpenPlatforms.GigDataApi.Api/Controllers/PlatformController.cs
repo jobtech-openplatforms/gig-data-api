@@ -431,23 +431,28 @@ namespace Jobtech.OpenPlatforms.GigDataApi.Api.Controllers
 
             foreach (var platformConnection in platformConnections)
             {
+                var isPlatformConnected = !platformConnection?.ConnectionInfo.IsDeleted ?? false;
+
                 var platform = platforms.Single(p => p.Id == platformConnection.PlatformId);
                 Platforms.Add(new PlatformUserConnectionInfoViewModel(platform.ExternalId, platform.Name,
-                    platform.Description, platform.LogoUrl, platform.WebsiteUrl, !platformConnection?.ConnectionInfo.IsDeleted ?? false,
+                    platform.Description, platform.LogoUrl, platform.WebsiteUrl, isPlatformConnected,
                     platform.AuthenticationMechanism, platformConnection?.ConnectionInfo.DeleteReason, platformConnection.LastSuccessfulDataFetch));
 
-                foreach (var connectionInfoNotificationInfo in platformConnection.ConnectionInfo.NotificationInfos)
+                if (isPlatformConnected)
                 {
-                    var app = apps.Single(a => a.Id == connectionInfoNotificationInfo.AppId);
-                    var appUserConnectionViewModel = Apps.SingleOrDefault(aucvm => aucvm.ApplicationId == app.ExternalId.ToString());
-                    if (appUserConnectionViewModel == null)
+                    foreach (var connectionInfoNotificationInfo in platformConnection.ConnectionInfo.NotificationInfos)
                     {
-                        Apps.Add(new AppUserConnectionViewModel(app.Name, app.ExternalId.ToString(),
-                            new List<Guid> {platform.ExternalId}));
-                    }
-                    else
-                    {
-                        appUserConnectionViewModel.ConnectedPlatforms.Add(platform.ExternalId);
+                        var app = apps.Single(a => a.Id == connectionInfoNotificationInfo.AppId);
+                        var appUserConnectionViewModel = Apps.SingleOrDefault(aucvm => aucvm.ApplicationId == app.ExternalId.ToString());
+                        if (appUserConnectionViewModel == null)
+                        {
+                            Apps.Add(new AppUserConnectionViewModel(app.Name, app.ExternalId.ToString(),
+                                new List<Guid> { platform.ExternalId }));
+                        }
+                        else
+                        {
+                            appUserConnectionViewModel.ConnectedPlatforms.Add(platform.ExternalId);
+                        }
                     }
                 }
             }
