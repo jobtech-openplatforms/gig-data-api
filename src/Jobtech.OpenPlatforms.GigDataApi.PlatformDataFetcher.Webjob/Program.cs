@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Jobtech.OpenPlatforms.GigDataApi.Common.Messages;
 using Jobtech.OpenPlatforms.GigDataApi.Common.RavenDB;
@@ -19,6 +20,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Rebus.Config;
 using Rebus.Persistence.FileSystem;
+using Rebus.Persistence.InMem;
 using Rebus.RabbitMq;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
@@ -116,7 +118,18 @@ namespace Jobtech.OpenPlatforms.GigDataApi.PlatformDataFetcher.Webjob
                         .Transport(t =>
                             t.UseRabbitMq(new List<ConnectionEndpoint> {rabbitMqConnectionEndpoint}, 
                                 inputQueueName))
-                        .Timeouts(t => t.UseFileSystem(timeoutsFilesystemFolder))
+                        .Timeouts(t => {
+                            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                            {
+                                //we can't use file system since it uses locking api on the underlying file stream which is not supported on OS X.
+                                //See: https://github.com/dotnet/coreclr/commit/0daa63e9ed40323b6f248ded8959530ea94f19aa
+                                t.StoreInMemory();
+                            } else
+                            {
+                                t.UseFileSystem(timeoutsFilesystemFolder);
+                            }
+                            
+                        })
                         .Options(o =>
                         {
                             o.SimpleRetryStrategy(errorQueueAddress: errorQueueName,
